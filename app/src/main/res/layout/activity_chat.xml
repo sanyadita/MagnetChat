@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/chatSuppliers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="#f6f6f6"
+        android:padding="15dp"
+        android:text="To:"
+        android:textColor="#7d7d7d" />
+
+    <RelativeLayout
+        android:id="@+id/chatBottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#f6f6f6"
+        android:padding="5dp">
+
+        <Button
+            android:id="@+id/chatSendBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:text="Send" />
+
+        <EditText
+            android:id="@+id/chatMessageField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toLeftOf="@+id/chatSendBtn"
+            android:layout_toStartOf="@+id/chatSendBtn"
+            android:hint="Write a comment..." />
+    </RelativeLayout>
+
+    <ListView
+        android:id="@+id/chatMessageList"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/chatBottom"
+        android:layout_below="@+id/chatSuppliers"
+        android:background="@drawable/bordered_bg" />
+
+</RelativeLayout>
