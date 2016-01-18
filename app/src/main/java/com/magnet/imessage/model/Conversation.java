@@ -37,6 +37,7 @@ public class Conversation {
     }
 
     public void addSupplier(UserInfo userInfo) {
+        System.out.print(userInfo);
         getSuppliers().put(userInfo.getUserId(), userInfo);
     }
 
@@ -77,7 +78,11 @@ public class Conversation {
                 UserInfo sender = suppliers.get(item.getPublisher().getUserId());
                 if (sender == null) {
                     sender = item.getPublisherInfo();
-                    suppliers.put(sender.getUserId(), sender);
+                    if (sender.getUserId() != null) {
+                        suppliers.put(sender.getUserId(), sender);
+                    } else {
+                        sender = null;
+                    }
                 }
                 messages.add(Message.createMessageFrom(item, sender));
             }

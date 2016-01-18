@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SearchView;
+import android.widget.Toast;
 
 import com.magnet.imessage.R;
 import com.magnet.imessage.core.CurrentApplication;
@@ -91,22 +92,27 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
 
     private void addUserToChannel(User user) {
         findViewById(R.id.chooseUserProgress).setVisibility(View.VISIBLE);
-        Set<User> userSet = new HashSet<>();
-        userSet.add(user);
-        conversation.getChannel().addSubscribers(userSet, new MMXChannel.OnFinishedListener<List<String>>() {
-            @Override
-            public void onSuccess(List<String> strings) {
-                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
-                finish();
-            }
+        if (conversation.getSuppliers().get(user.getUserIdentifier()) == null) {
+            Set<User> userSet = new HashSet<>();
+            userSet.add(user);
+            conversation.getChannel().addSubscribers(userSet, new MMXChannel.OnFinishedListener<List<String>>() {
+                @Override
+                public void onSuccess(List<String> strings) {
+                    findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                    finish();
+                }
 
-            @Override
-            public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
-                showMessage("Can't add user to channel");
-                Logger.error("add user", throwable);
-            }
-        });
+                @Override
+                public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                    findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                    showMessage("Can't add user to channel");
+                    Logger.error("add user", throwable);
+                }
+            });
+        } else {
+            Toast.makeText(this, "User was already added", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     private void searchUsers(@NonNull String query) {

@@ -147,22 +147,16 @@ public class ChatActivity extends BaseActivity {
     private ChannelHelper.OnCreateChannelListener createListener = new ChannelHelper.OnCreateChannelListener() {
         @Override
         public void onSuccessCreated(MMXChannel channel) {
-            if (CurrentApplication.CURR_APP_MODE == CurrentApplication.APP_MODE.NORMAL) {
                 ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
-            } else {
-                ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
-            }
+//                ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
         }
 
         @Override
         public void onChannelExists(MMXChannel channel) {
             currentConversation = CurrentApplication.getInstance().getConversationByName(channel.getName());
             if (currentConversation == null) {
-                if (CurrentApplication.CURR_APP_MODE == CurrentApplication.APP_MODE.NORMAL) {
                     ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
-                } else {
-                    ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
-                }
+//                    ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
             } else {
                 prepareConversation(currentConversation);
                 MMX.registerListener(eventListener);

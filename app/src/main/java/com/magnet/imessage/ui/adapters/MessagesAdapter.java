@@ -76,7 +76,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private void makeMessageToMe(ViewHolder viewHolder, Message message) {
         viewHolder.messageArea.setGravity(Gravity.LEFT | Gravity.START);
         viewHolder.text.setText(message.getText());
-        viewHolder.text.setBackgroundColor(context.getResources().getColor(R.color.messageBackgroundToMe));
+        viewHolder.text.setBackgroundResource(R.drawable.msg_received);
         viewHolder.text.setTextColor(Color.BLACK);
         viewHolder.delivered.setVisibility(View.GONE);
         if (message.getSender() != null) {
@@ -88,7 +88,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private void makeMessageFromMe(ViewHolder viewHolder, Message message) {
         viewHolder.messageArea.setGravity(Gravity.RIGHT | Gravity.END);
         viewHolder.text.setText(message.getText());
-        viewHolder.text.setBackgroundColor(context.getResources().getColor(R.color.messageBackgroundFromMe));
+        viewHolder.text.setBackgroundResource(R.drawable.msg_sent);
         viewHolder.text.setTextColor(Color.WHITE);
         viewHolder.sender.setVisibility(View.GONE);
         if (message.isDelivered()) {

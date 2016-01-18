@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.CheckBox;
 
 import com.magnet.imessage.R;
+import com.magnet.imessage.helpers.InternetConnection;
 import com.magnet.imessage.helpers.UserHelper;
 import com.magnet.imessage.preferences.UserPreference;
 import com.magnet.imessage.util.Logger;
@@ -29,8 +30,11 @@ public class LoginActivity extends BaseActivity {
         } else if (credence != null) {
             setText(R.id.loginEmail, credence[0]);
             setText(R.id.loginPassword, credence[1]);
-            changeLoginMode(true);
-            UserHelper.getInstance().checkAuthentication(loginListener);
+            remember.setChecked(true);
+            if (InternetConnection.getInstance().isAnyConnectionAvailable()) {
+                changeLoginMode(true);
+                UserHelper.getInstance().checkAuthentication(loginListener);
+            }
         }
     }
 
@@ -53,14 +57,18 @@ public class LoginActivity extends BaseActivity {
 //                startActivity(new Intent(this, RegisterActivity.class));
                 break;
             case R.id.loginSignInBtn:
-                final String email = getFieldText(R.id.loginEmail);
-                final String password = getFieldText(R.id.loginPassword);
-                boolean shouldRemember = remember.isChecked();
-                if (checkStrings(email, password)) {
-                    changeLoginMode(true);
-                    UserHelper.getInstance().login(email, password, shouldRemember, loginListener);
+                if (InternetConnection.getInstance().isAnyConnectionAvailable()) {
+                    final String email = getFieldText(R.id.loginEmail);
+                    final String password = getFieldText(R.id.loginPassword);
+                    boolean shouldRemember = remember.isChecked();
+                    if (checkStrings(email, password)) {
+                        changeLoginMode(true);
+                        UserHelper.getInstance().login(email, password, shouldRemember, loginListener);
+                    } else {
+                        showLoginFailed();
+                    }
                 } else {
-                    showLoginFailed();
+                    showNoConnection();
                 }
                 break;
         }
@@ -68,6 +76,10 @@ public class LoginActivity extends BaseActivity {
 
     private void showLoginFailed() {
         showInfoDialog("Email or password is incorrect", "Please check your information and try again");
+    }
+
+    private void showNoConnection() {
+        showInfoDialog("No connection", "Please check your Internet connection and try again");
     }
 
     private void changeLoginMode(boolean runLogining) {

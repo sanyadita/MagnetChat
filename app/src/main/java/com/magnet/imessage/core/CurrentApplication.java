@@ -4,6 +4,7 @@ import android.app.Application;
 
 import com.magnet.imessage.R;
 import com.magnet.imessage.helpers.ChannelHelper;
+import com.magnet.imessage.helpers.InternetConnection;
 import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.model.Message;
 import com.magnet.imessage.preferences.UserPreference;
@@ -18,10 +19,6 @@ import java.util.Map;
 
 public class CurrentApplication extends Application {
 
-    public enum APP_MODE {DEV, NORMAL}
-
-    public static APP_MODE CURR_APP_MODE = APP_MODE.DEV;
-
     private static CurrentApplication instance;
 
     private Map<String, Conversation> conversations;
@@ -31,12 +28,9 @@ public class CurrentApplication extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
-        if (CURR_APP_MODE == APP_MODE.DEV) {
-            Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax_dev));
-        } else {
-            Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax));
-        }
+        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax));
         UserPreference.getInstance(this);
+        InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
     }
 
