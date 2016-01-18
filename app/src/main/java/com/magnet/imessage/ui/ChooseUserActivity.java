@@ -1,5 +1,6 @@
 package com.magnet.imessage.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.view.View;
@@ -8,19 +9,29 @@ import android.widget.ListView;
 import android.widget.SearchView;
 
 import com.magnet.imessage.R;
+import com.magnet.imessage.core.CurrentApplication;
+import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.ui.adapters.UsersAdapter;
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiCallback;
 import com.magnet.max.android.ApiError;
 import com.magnet.max.android.User;
+import com.magnet.mmx.client.api.MMXChannel;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ChooseUserActivity extends BaseActivity implements SearchView.OnQueryTextListener, SearchView.OnCloseListener, AdapterView.OnItemClickListener {
 
+    public static final String TAG_ADD_USER_TO_CHANNEL = "addUserToChannel";
+
+    private enum ActivityMode {MODE_TO_CREATE, MODE_TO_ADD_USER};
+
     private UsersAdapter adapter;
     private ListView userList;
-    private SearchView search;
+    private ActivityMode currentMode;
+    private Conversation conversation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,10 +39,16 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
         setContentView(R.layout.activity_choose_user);
         userList = (ListView) findViewById(R.id.chooseUserList);
         userList.setOnItemClickListener(this);
-        search = (SearchView) findViewById(R.id.chooseUserSearch);
+        SearchView search = (SearchView) findViewById(R.id.chooseUserSearch);
         search.setOnQueryTextListener(this);
         search.setOnCloseListener(this);
         searchUsers("");
+        currentMode = ActivityMode.MODE_TO_CREATE;
+        String channelName = getIntent().getStringExtra(TAG_ADD_USER_TO_CHANNEL);
+        if (channelName != null) {
+            conversation = CurrentApplication.getInstance().getConversationByName(channelName);
+            currentMode = ActivityMode.MODE_TO_ADD_USER;
+        }
         setTitle("New Message");
     }
 
@@ -42,7 +59,15 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         User selectedUser = adapter.getItem(position);
-        startActivity(ChatActivity.getIntentForNewChannel(selectedUser.getUserIdentifier()));
+        switch (currentMode) {
+            case MODE_TO_ADD_USER:
+                addUserToChannel(selectedUser);
+                break;
+            case MODE_TO_CREATE:
+                startActivity(ChatActivity.getIntentForNewChannel(selectedUser.getUserIdentifier()));
+                finish();
+                break;
+        }
     }
 
     @Override
@@ -62,6 +87,26 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
     @Override
     public boolean onQueryTextChange(String newText) {
         return false;
+    }
+
+    private void addUserToChannel(User user) {
+        findViewById(R.id.chooseUserProgress).setVisibility(View.VISIBLE);
+        Set<User> userSet = new HashSet<>();
+        userSet.add(user);
+        conversation.getChannel().addSubscribers(userSet, new MMXChannel.OnFinishedListener<List<String>>() {
+            @Override
+            public void onSuccess(List<String> strings) {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                finish();
+            }
+
+            @Override
+            public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                showMessage("Can't add user to channel");
+                Logger.error("add user", throwable);
+            }
+        });
     }
 
     private void searchUsers(@NonNull String query) {
@@ -87,6 +132,16 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
     private void updateList(List<User> users) {
         adapter = new UsersAdapter(this, users);
         userList.setAdapter(adapter);
+    }
+
+    public static Intent getIntentToCreateChannel() {
+        return new Intent(CurrentApplication.getInstance(), ChooseUserActivity.class);
+    }
+
+    public static Intent getIntentToAddUserToChannel(String channelName) {
+        Intent intent = new Intent(CurrentApplication.getInstance(), ChooseUserActivity.class);
+        intent.putExtra(TAG_ADD_USER_TO_CHANNEL, channelName);
+        return intent;
     }
 
 }

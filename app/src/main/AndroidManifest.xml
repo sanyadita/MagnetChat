@@ -30,6 +30,7 @@
         <activity
             android:name=".ui.ChatActivity"
             android:label="Chat" />
+        <activity android:name=".ui.DetailsActivity"/>
     </application>
 
 </manifest>

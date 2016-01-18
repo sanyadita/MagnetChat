@@ -1,11 +1,16 @@
 package com.magnet.imessage.ui;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,10 +28,9 @@ import com.magnet.imessage.ui.adapters.ConversationsAdapter;
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiError;
 import com.magnet.max.android.User;
+import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.magnet.mmx.client.api.MMXMessage;
 
 public class HomeActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener, AdapterView.OnItemClickListener {
 
@@ -34,6 +38,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private String username;
     private ConversationsAdapter adapter;
     private ListView conversationsList;
+    private AlertDialog leaveDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,8 +66,14 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
 
         conversationsList = (ListView) findViewById(R.id.homeConversationsList);
         conversationsList.setOnItemClickListener(this);
-        readConversations();
-//        ChannelHelper.getInstance().readConversations(readChannelInfoListener);
+        conversationsList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                showLeaveDialog(adapter.getItem(position));
+                return false;
+            }
+        });
+        ChannelHelper.getInstance().readConversations(readChannelInfoListener);
     }
 
     @Override
@@ -94,7 +105,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menuHomeCreateConversation:
-                startActivity(new Intent(this, ChooseUserActivity.class));
+                startActivity(ChooseUserActivity.getIntentToCreateChannel());
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -121,6 +132,18 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
+        MMX.registerListener(eventListener);
+        registerReceiver(onAddedConversation, new IntentFilter("com.magnet.imessage.ADDED_CONVERSATION"));
+    }
+
+    @Override
+    protected void onPause() {
+        MMX.unregisterListener(eventListener);
+        unregisterReceiver(onAddedConversation);
+        if (leaveDialog != null && leaveDialog.isShowing()) {
+            leaveDialog.dismiss();
+        }
+        super.onPause();
     }
 
     @Override
@@ -128,40 +151,60 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
 
     }
 
-    private void readConversations() {
-        MMXChannel.getAllSubscriptions(new MMXChannel.OnFinishedListener<List<MMXChannel>>() {
-            @Override
-            public void onSuccess(List<MMXChannel> channels) {
-                Logger.debug("read conversations", "success");
-                CurrentApplication.getInstance().setConversations(new ArrayList<Conversation>(channels.size()));
-                for (MMXChannel channel : channels) {
-                    Conversation conversation = new Conversation();
-                    conversation.setChannel(channel);
-                    CurrentApplication.getInstance().getConversations().add(conversation);
-                    ChannelHelper.getInstance().readMessagesToConversation(channel, conversation, readChannelInfoListener);
-                    ChannelHelper.getInstance().readSubscribersToConversation(channel, conversation, readChannelInfoListener);
-                }
-                updateList();
-            }
-
-            @Override
-            public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                showMessage("Can't read conversations");
-                Logger.error("read conversations", throwable);
-            }
-        });
-    }
-
-    private void updateList() {
+    private void showList() {
+        findViewById(R.id.homeProgress).setVisibility(View.GONE);
         adapter = new ConversationsAdapter(this, CurrentApplication.getInstance().getConversations());
         conversationsList.setAdapter(adapter);
     }
 
+    private void updateList() {
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+    }
+
+    private void showLeaveDialog(final Conversation conversation) {
+        if (leaveDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setCancelable(false).setMessage("Are you sure that you want to leave conversation");
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    leaveDialog.dismiss();
+                }
+            });
+            leaveDialog = builder.create();
+        }
+        leaveDialog.setButton(DialogInterface.BUTTON_POSITIVE, "Leave", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
+                ChannelHelper.getInstance().unsubscribeFromChannel(conversation, new ChannelHelper.OnLeaveChannelListener() {
+                    @Override
+                    public void onSuccess() {
+                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                        updateList();
+                    }
+
+                    @Override
+                    public void onFailure(Throwable throwable) {
+                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                        showMessage("Can't leave the conversation");
+                    }
+                });
+                leaveDialog.dismiss();
+            }
+        });
+        leaveDialog.show();
+    }
+
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
-        public void onSuccessFinish() {
+        public void onSuccessFinish(Conversation lastConversation) {
             if (adapter != null) {
                 adapter.notifyDataSetChanged();
+            } else {
+                showList();
             }
         }
 
@@ -180,6 +223,57 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         @Override
         public void onFailedLogin(ApiError apiError) {
             showMessage("Can't sign out");
+        }
+    };
+
+    private MMX.EventListener eventListener = new MMX.EventListener() {
+        @Override
+        public boolean onMessageReceived(MMXMessage mmxMessage) {
+            Logger.debug("onMessageReceived");
+            updateList();
+            return false;
+        }
+
+        @Override
+        public boolean onMessageAcknowledgementReceived(User from, String messageId) {
+            Logger.debug("onMessageAcknowledgementReceived");
+            updateList();
+            return false;
+        }
+
+        @Override
+        public boolean onInviteReceived(MMXChannel.MMXInvite invite) {
+            Logger.debug("onInviteReceived");
+            updateList();
+            return false;
+        }
+
+        @Override
+        public boolean onInviteResponseReceived(MMXChannel.MMXInviteResponse inviteResponse) {
+            Logger.debug("onInviteResponseReceived");
+            updateList();
+            return false;
+        }
+
+        @Override
+        public boolean onLoginRequired(MMX.LoginReason reason) {
+            Logger.debug("onLoginRequired");
+            updateList();
+            return false;
+        }
+
+        @Override
+        public boolean onMessageSendError(String messageId, MMXMessage.FailureCode code, String text) {
+            Logger.debug("onMessageSendError");
+            updateList();
+            return false;
+        }
+    };
+
+    private BroadcastReceiver onAddedConversation = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            updateList();
         }
     };
 

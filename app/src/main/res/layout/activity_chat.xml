@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     android:layout_height="match_parent">
 
     <TextView
@@ -40,12 +42,14 @@
             android:hint="Write a comment..." />
     </RelativeLayout>
 
-    <ListView
+    <android.support.v7.widget.RecyclerView
         android:id="@+id/chatMessageList"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@id/chatBottom"
         android:layout_below="@+id/chatSuppliers"
+        android:dividerHeight="0dp"
+        android:divider="@null"
         android:background="@drawable/bordered_bg" />
 
 </RelativeLayout>

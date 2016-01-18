@@ -9,6 +9,7 @@ import com.magnet.max.android.Max;
 import com.magnet.max.android.User;
 import com.magnet.max.android.auth.model.UserRegistrationInfo;
 import com.magnet.mmx.client.api.MMX;
+import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.List;
 
@@ -89,10 +90,12 @@ public class UserHelper {
         });
     }
 
-    public void relogin(OnLoginListener onLoginListener) {
-        String[] credence = UserPreference.getInstance().readCredence();
-        if (User.getCurrentUser() == null && credence != null) {
-            login(credence[0], credence[1], false, onLoginListener);
+    public void checkAuthentication(OnLoginListener onLoginListener) {
+        if (User.getCurrentUser() == null) {
+            String[] credence = UserPreference.getInstance().readCredence();
+            if (credence != null) {
+                login(credence[0], credence[1], false, onLoginListener);
+            }
         }
     }
 
@@ -104,7 +107,7 @@ public class UserHelper {
                     @Override
                     public void success(Boolean aBoolean) {
                         UserPreference.getInstance().cleanCredence();
-                        CurrentApplication.getInstance().setConversations(null);
+                        CurrentApplication.getInstance().removeConversations();
                         Logger.debug("logout", "success");
                         listener.onSuccess();
                     }
@@ -125,13 +128,15 @@ public class UserHelper {
         });
     }
 
-    public String userNamesAsString(List<User> userList) {
+    public String userNamesAsString(List<UserInfo> userList) {
         String users = "";
         for (int i = 0; i < userList.size(); i++) {
-            User user = userList.get(i);
-            users += user.getFirstName() + " " + user.getLastName();
-            if (i != userList.size() - 1) {
-                users += ", ";
+            UserInfo user = userList.get(i);
+            if (user != null) {
+                users += user.getDisplayName();
+                if (i != userList.size() - 1) {
+                    users += ", ";
+                }
             }
         }
         return users;

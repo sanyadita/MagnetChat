@@ -2,8 +2,11 @@ package com.magnet.imessage.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.ListView;
 
 import com.magnet.imessage.R;
 import com.magnet.imessage.core.CurrentApplication;
@@ -13,49 +16,49 @@ import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.model.Message;
 import com.magnet.imessage.ui.adapters.MessagesAdapter;
 import com.magnet.imessage.util.Logger;
+import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
+import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.List;
 
 public class ChatActivity extends BaseActivity {
 
-    public static final String TAG_IDX_FROM_CHANNELS_LIST = "idxFromChannelList";
+    public static final String TAG_CHANNEL_NAME = "channelName";
     public static final String TAG_CREATE_WITH_USER_ID = "createWithUserId";
     public static final String TAG_CREATE_NEW = "createNew";
 
     private Conversation currentConversation;
     private MessagesAdapter adapter;
-    private ListView messagesListView;
+    private RecyclerView messagesListView;
+    private String channelName;
 
     @Override
-
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
         findViewById(R.id.chatSendBtn).setOnClickListener(this);
-        messagesListView = (ListView) findViewById(R.id.chatMessageList);
+
+        messagesListView = (RecyclerView) findViewById(R.id.chatMessageList);
+        final LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        layoutManager.setStackFromEnd(true);
+        layoutManager.setReverseLayout(false);
+        messagesListView.setLayoutManager(layoutManager);
+
         if (getIntent().getBooleanExtra(TAG_CREATE_NEW, false)) {
             String userId = getIntent().getStringExtra(TAG_CREATE_WITH_USER_ID);
             if (userId != null) {
                 ChannelHelper.getInstance().createChannelForUsers(userId, createListener);
             }
         } else {
-            int channelIdx = getIntent().getIntExtra(TAG_IDX_FROM_CHANNELS_LIST, -1);
-            if (channelIdx >= 0) {
-                currentConversation = CurrentApplication.getInstance().getConversationByIdx(channelIdx);
-                if (currentConversation.getSuppliers().size() == 1) {
-                    setTitle(UserHelper.getInstance().userNamesAsString(currentConversation.getSuppliers()));
-                } else {
-                    setTitle("Group");
-                }
-                String suppliers = UserHelper.getInstance().userNamesAsString(currentConversation.getSuppliers());
-                setText(R.id.chatSuppliers, "To: " + suppliers);
-                updateMessagesList(currentConversation.getMessages());
+            channelName = getIntent().getStringExtra(TAG_CHANNEL_NAME);
+            if (channelName != null) {
+                prepareConversation(CurrentApplication.getInstance().getConversationByName(channelName));
             }
         }
-        MMX.registerListener(eventListener);
     }
 
     @Override
@@ -63,16 +66,17 @@ public class ChatActivity extends BaseActivity {
         switch (v.getId()) {
             case R.id.chatSendBtn:
                 String text = getFieldText(R.id.chatMessageField);
-                if (text != null) {
-                    Message message = Message.createMessage(currentConversation.getChannel(), text);
-                    currentConversation.sendMessage(message, new MMXChannel.OnFinishedListener<String>() {
+                if (text != null && !text.isEmpty()) {
+                    currentConversation.sendMessage(text, new Conversation.OnSendMessageListener() {
                         @Override
-                        public void onSuccess(String s) {
+                        public void onSuccessSend(Message message) {
+                            CurrentApplication.getInstance().getMessagesToApproveDeliver().put(message.getMessageId(), message);
                             clearFieldText(R.id.chatMessageField);
+                            updateList();
                         }
 
                         @Override
-                        public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                        public void onFailure(Throwable throwable) {
                             Logger.error("send messages", throwable);
                             showMessage("Can't send message");
                         }
@@ -82,37 +86,87 @@ public class ChatActivity extends BaseActivity {
         }
     }
 
-    private void updateMessagesList(List<Message> messages) {
+    @Override
+    protected void onPause() {
+        MMX.unregisterListener(eventListener);
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentConversation != null) {
+            prepareConversation(currentConversation);
+        }
+        MMX.registerListener(eventListener);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_chat, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menuChatOpenDetails:
+                String name = currentConversation.getChannel().getName();
+                startActivity(DetailsActivity.createIntentForChannel(name));
+                break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void setMessagesList(List<Message> messages) {
         adapter = new MessagesAdapter(this, messages);
         messagesListView.setAdapter(adapter);
+    }
+
+    private void updateList() {
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+            messagesListView.smoothScrollToPosition(adapter.getItemCount());
+        }
+    }
+
+    private void prepareConversation(Conversation conversation) {
+        currentConversation = conversation;
+        List<UserInfo> suppliersList = conversation.getSuppliersList();
+        if (conversation.getSuppliers().size() == 1) {
+            setTitle(UserHelper.getInstance().userNamesAsString(suppliersList));
+        } else {
+            setTitle("Group");
+        }
+        conversation.setHasUnreadMessage(false);
+        String suppliers = UserHelper.getInstance().userNamesAsString(suppliersList);
+        setText(R.id.chatSuppliers, "To: " + suppliers);
+        setMessagesList(conversation.getMessages());
     }
 
     private ChannelHelper.OnCreateChannelListener createListener = new ChannelHelper.OnCreateChannelListener() {
         @Override
         public void onSuccessCreated(MMXChannel channel) {
-            currentConversation = new Conversation();
-            currentConversation.setChannel(channel);
-            CurrentApplication.getInstance().getConversations().add(currentConversation);
-            ChannelHelper.getInstance().readSubscribersToConversation(channel, currentConversation, readChannelInfoListener);
-            updateMessagesList(currentConversation.getMessages());
+            if (CurrentApplication.CURR_APP_MODE == CurrentApplication.APP_MODE.NORMAL) {
+                ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
+            } else {
+                ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
+            }
         }
 
         @Override
         public void onChannelExists(MMXChannel channel) {
-            List<Conversation> conversations = CurrentApplication.getInstance().getConversations();
-            for (Conversation conversation : conversations) {
-                if (conversation.getChannel().getName().equals(channel.getName())) {
-                    currentConversation = conversation;
-                    break;
-                }
-            }
+            currentConversation = CurrentApplication.getInstance().getConversationByName(channel.getName());
             if (currentConversation == null) {
-                currentConversation = new Conversation();
-                currentConversation.setChannel(channel);
-                CurrentApplication.getInstance().getConversations().add(currentConversation);
-                ChannelHelper.getInstance().readSubscribersToConversation(channel, currentConversation, readChannelInfoListener);
+                if (CurrentApplication.CURR_APP_MODE == CurrentApplication.APP_MODE.NORMAL) {
+                    ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
+                } else {
+                    ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
+                }
+            } else {
+                prepareConversation(currentConversation);
+                MMX.registerListener(eventListener);
             }
-            updateMessagesList(currentConversation.getMessages());
         }
 
         @Override
@@ -124,9 +178,8 @@ public class ChatActivity extends BaseActivity {
 
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
-        public void onSuccessFinish() {
-            String suppliers = UserHelper.getInstance().userNamesAsString(currentConversation.getSuppliers());
-            setText(R.id.chatSuppliers, "To: " + suppliers);
+        public void onSuccessFinish(Conversation lastConversation) {
+            prepareConversation(lastConversation);
         }
 
         @Override
@@ -139,17 +192,26 @@ public class ChatActivity extends BaseActivity {
     private MMX.EventListener eventListener = new MMX.EventListener() {
         @Override
         public boolean onMessageReceived(MMXMessage mmxMessage) {
-            if (adapter != null && currentConversation.getChannel().equals(mmxMessage.getChannel())) {
-                adapter.notifyDataSetChanged();
+            if (adapter != null && mmxMessage.getChannel() != null && channelName.equals(mmxMessage.getChannel().getName())) {
+                updateList();
+                currentConversation.setHasUnreadMessage(false);
+            }
+            return false;
+        }
+
+        @Override
+        public boolean onMessageAcknowledgementReceived(User from, String messageId) {
+            if (adapter != null) {
+                updateList();
             }
             return false;
         }
     };
 
     public static Intent getIntentWithChannel(Conversation conversation) {
-        int channelIdx = CurrentApplication.getInstance().getConversations().indexOf(conversation);
+        String name = conversation.getChannel().getName();
         Intent intent = new Intent(CurrentApplication.getInstance(), ChatActivity.class);
-        intent.putExtra(TAG_IDX_FROM_CHANNELS_LIST, channelIdx);
+        intent.putExtra(TAG_CHANNEL_NAME, name);
         return intent;
     }
 

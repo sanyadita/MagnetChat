@@ -4,5 +4,5 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
     <color name="messageBackgroundFromMe">#0062ff</color>
-    <color name="messageBackgroundToMe">#7d7d7d</color>
+    <color name="messageBackgroundToMe">#e6e6e6</color>
 </resources>

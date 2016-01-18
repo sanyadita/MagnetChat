@@ -9,14 +9,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.magnet.imessage.R;
-import com.magnet.max.android.User;
+import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.List;
 
-public class UsersAdapter extends ArrayAdapter<User> {
+public class UserInfoAdapter extends ArrayAdapter<UserInfo> {
 
     private LayoutInflater inflater;
     private AddUserListener addUser;
+    private boolean canAddUser;
 
     private class ViewHolder {
         ImageView icon;
@@ -28,21 +29,16 @@ public class UsersAdapter extends ArrayAdapter<User> {
         void addUser();
     }
 
-    public UsersAdapter(Context context, List<User> users) {
-        this(context, users, null);
-    }
-
-    public UsersAdapter(Context context, List<User> users, AddUserListener addUser) {
+    public UserInfoAdapter(Context context, List<UserInfo> users, boolean canAddUser, AddUserListener addUser) {
         super(context, R.layout.item_user, users);
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        if (addUser != null) {
-            this.addUser = addUser;
-        }
+        this.addUser = addUser;
+        this.canAddUser = canAddUser;
     }
 
     @Override
     public int getCount() {
-        if (addUser != null) {
+        if (canAddUser) {
             return super.getCount() + 1;
         }
         return super.getCount();
@@ -50,17 +46,18 @@ public class UsersAdapter extends ArrayAdapter<User> {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        if (addUser != null && position == getCount() - 1) {
+        if (canAddUser && position == getCount() - 1) {
             View addUserView = inflater.inflate(R.layout.item_add_user, parent, false);
             addUserView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    addUser.addUser();
+                    if (addUser != null)
+                        addUser.addUser();
                 }
             });
             return addUserView;
         } else {
-            User user = getItem(position);
+            UserInfo userInfo = getItem(position);
             final ViewHolder viewHolder;
             if (convertView == null) {
                 convertView = inflater.inflate(R.layout.item_user, parent, false);
@@ -72,11 +69,8 @@ public class UsersAdapter extends ArrayAdapter<User> {
             } else {
                 viewHolder = (ViewHolder) convertView.getTag();
             }
-            if (user.getFirstName() != null) {
-                viewHolder.firstName.setText(user.getFirstName());
-            }
-            if (user.getLastName() != null) {
-                viewHolder.lastName.setText(user.getLastName());
+            if (userInfo.getDisplayName() != null) {
+                viewHolder.firstName.setText(userInfo.getDisplayName());
             }
         }
         return convertView;

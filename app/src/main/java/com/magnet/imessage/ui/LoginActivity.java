@@ -30,7 +30,15 @@ public class LoginActivity extends BaseActivity {
             setText(R.id.loginEmail, credence[0]);
             setText(R.id.loginPassword, credence[1]);
             changeLoginMode(true);
-            UserHelper.getInstance().relogin(loginListener);
+            UserHelper.getInstance().checkAuthentication(loginListener);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (User.getCurrentUser() != null) {
+            finish();
         }
     }
 

@@ -1,28 +1,50 @@
 package com.magnet.imessage.model;
 
-import com.magnet.max.android.User;
+import com.magnet.imessage.util.Logger;
 import com.magnet.mmx.client.api.MMXChannel;
-import com.magnet.mmx.client.api.MMXMessage;
+import com.magnet.mmx.client.internal.channel.PubSubItemChannel;
+import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Conversation {
 
-    private List<User> suppliers;
+    private Map<String, UserInfo> suppliers;
     private List<Message> messages;
     private boolean hasUnreadMessage;
     private MMXChannel channel;
 
+    public interface OnSendMessageListener {
+        void onSuccessSend(Message message);
+        void onFailure(Throwable throwable);
+    }
+
     public Conversation() {
     }
 
-    public List<User> getSuppliers() {
+    public Map<String, UserInfo> getSuppliers() {
+        if (suppliers == null) {
+            suppliers = new HashMap<>();
+        }
         return suppliers;
     }
 
-    public void setSuppliers(List<User> suppliers) {
-        this.suppliers = suppliers;
+    public List<UserInfo> getSuppliersList() {
+        return new ArrayList<>(getSuppliers().values());
+    }
+
+    public void addSupplier(UserInfo userInfo) {
+        getSuppliers().put(userInfo.getUserId(), userInfo);
+    }
+
+    public void setSuppliers(List<UserInfo> suppliersList) {
+        this.suppliers = new HashMap<>();
+        for (UserInfo userInfo : suppliersList) {
+            suppliers.put(userInfo.getUserId(), userInfo);
+        }
     }
 
     public boolean hasUnreadMessage() {
@@ -42,50 +64,63 @@ public class Conversation {
     }
 
     public List<Message> getMessages() {
+        if (messages == null) {
+            messages = new ArrayList<>();
+        }
         return messages;
     }
 
-    public void setMessages(List<MMXMessage> mmxMessages) {
-        if (mmxMessages != null) {
-            messages = new ArrayList<>(mmxMessages.size());
-            for (MMXMessage mmxMessage : mmxMessages) {
-                Message message = new Message();
-                message.setMmxMessage(mmxMessage);
-                message.setDelivered(true);
-                messages.add(message);
+    public void setMessages(List<PubSubItemChannel> pubSubItems) {
+        if (pubSubItems != null) {
+            messages = new ArrayList<>(pubSubItems.size());
+            for (PubSubItemChannel item : pubSubItems) {
+                UserInfo sender = suppliers.get(item.getPublisher().getUserId());
+                if (sender == null) {
+                    sender = item.getPublisherInfo();
+                    suppliers.put(sender.getUserId(), sender);
+                }
+                messages.add(Message.createMessageFrom(item, sender));
             }
         } else {
             messages = new ArrayList<>();
         }
     }
 
-    public boolean isLoaded() {
-        return suppliers != null && messages != null && channel != null;
-    }
-
     public void addMessage(Message message) {
-        if (!messages.contains(message)) {
+        if (!getMessages().contains(message)) {
             messages.add(message);
         }
     }
 
-    public void sendMessage(final Message message, final MMXChannel.OnFinishedListener<String> listener) {
+    public void sendMessage(final String text, final OnSendMessageListener listener) {
         if (channel != null) {
-            channel.publish(message.getMmxMessage(), new MMXChannel.OnFinishedListener<String>() {
+            Map<String, String> content = Message.makeContent(text);
+            final Message message = new Message();
+            message.setContent(content);
+            channel.publish(content, new MMXChannel.OnFinishedListener<String>() {
                 @Override
                 public void onSuccess(String s) {
+                    Logger.debug("send message", "success");
+                    message.setMessageId(s);
                     addMessage(message);
-                    listener.onSuccess(s);
+                    listener.onSuccessSend(message);
                 }
 
                 @Override
                 public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                    listener.onFailure(failureCode, throwable);
+                    listener.onFailure(throwable);
                 }
             });
         } else {
             throw new Error();
         }
+    }
+
+    public String ownerId() {
+        if (channel == null) {
+            return null;
+        }
+        return channel.getOwnerId();
     }
 
 }
