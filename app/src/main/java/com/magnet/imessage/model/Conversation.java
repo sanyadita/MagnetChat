@@ -1,6 +1,7 @@
 package com.magnet.imessage.model;
 
 import com.magnet.imessage.util.Logger;
+import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.internal.channel.PubSubItemChannel;
 import com.magnet.mmx.client.internal.channel.UserInfo;
@@ -37,8 +38,13 @@ public class Conversation {
     }
 
     public void addSupplier(UserInfo userInfo) {
-        System.out.print(userInfo);
         getSuppliers().put(userInfo.getUserId(), userInfo);
+    }
+    public void addSupplier(User user) {
+        UserInfo.UserInfoBuilder infoBuilder = new UserInfo.UserInfoBuilder();
+        infoBuilder.userId(user.getUserIdentifier());
+        infoBuilder.displayName(user.getFirstName() + " " + user.getLastName());
+        getSuppliers().put(user.getUserIdentifier(), infoBuilder.build());
     }
 
     public void setSuppliers(List<UserInfo> suppliersList) {
@@ -102,6 +108,7 @@ public class Conversation {
             Map<String, String> content = Message.makeContent(text);
             final Message message = new Message();
             message.setContent(content);
+            message.setCreateTime(System.currentTimeMillis());
             channel.publish(content, new MMXChannel.OnFinishedListener<String>() {
                 @Override
                 public void onSuccess(String s) {

@@ -11,16 +11,19 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.magnet.imessage.R;
+import com.magnet.imessage.helpers.DateHelper;
 import com.magnet.imessage.model.Message;
 import com.magnet.max.android.User;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHolder> {
 
     private LayoutInflater inflater;
-    private Context context;
     private List<Message> messageList;
+    private List<Integer> firstMsgIdxs;
+    private List<String> dates;
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         LinearLayout messageArea;
@@ -41,8 +44,16 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
 
     public MessagesAdapter(Context context, List<Message> messages) {
         inflater = LayoutInflater.from(context);
-        this.context = context;
         this.messageList = messages;
+        firstMsgIdxs = new ArrayList<>();
+        dates = new ArrayList<>();
+        for (int i = 0; i < messages.size(); i++) {
+            String msgDay = DateHelper.getMessageDay(messages.get(i).getCreateTime());
+            if (!dates.contains(msgDay)) {
+                firstMsgIdxs.add(i);
+                dates.add(msgDay);
+            }
+        }
     }
 
     @Override
@@ -57,6 +68,17 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
             return;
         }
         Message message = getItem(position);
+        String msgDay = DateHelper.getMessageDay(message.getCreateTime());
+        if (!dates.contains(msgDay)) {
+            firstMsgIdxs.add(position);
+            dates.add(msgDay);
+        }
+        if (firstMsgIdxs.contains(position)) {
+            holder.date.setVisibility(View.VISIBLE);
+            holder.date.setText(String.format("%s %s", msgDay, DateHelper.getTime(message.getCreateTime())));
+        } else {
+            holder.date.setVisibility(View.GONE);
+        }
         if (message.getSender() == null || User.getCurrentUserId().equals(message.getSender().getUserId())) {
             makeMessageFromMe(holder, message);
         } else {

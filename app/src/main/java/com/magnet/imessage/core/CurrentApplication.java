@@ -5,13 +5,17 @@ import android.app.Application;
 import com.magnet.imessage.R;
 import com.magnet.imessage.helpers.ChannelHelper;
 import com.magnet.imessage.helpers.InternetConnection;
+import com.magnet.imessage.helpers.UserHelper;
 import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.model.Message;
 import com.magnet.imessage.preferences.UserPreference;
+import com.magnet.imessage.util.Logger;
+import com.magnet.max.android.ApiError;
 import com.magnet.max.android.Max;
 import com.magnet.max.android.User;
 import com.magnet.max.android.config.MaxAndroidPropertiesConfig;
 import com.magnet.mmx.client.api.MMX;
+import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
 
 import java.util.HashMap;
@@ -73,6 +77,28 @@ public class CurrentApplication extends Application {
     }
 
     private MMX.EventListener eventListener = new MMX.EventListener() {
+        @Override
+        public boolean onLoginRequired(MMX.LoginReason reason) {
+            Logger.debug("login required", reason.name());
+            UserHelper.getInstance().checkAuthentication(new UserHelper.OnLoginListener() {
+                @Override
+                public void onSuccess() {
+
+                }
+
+                @Override
+                public void onFailedLogin(ApiError apiError) {
+
+                }
+            });
+            return false;
+        }
+
+        @Override
+        public boolean onInviteReceived(MMXChannel.MMXInvite invite) {
+            Logger.debug("invite to", invite.getInviteInfo().getChannel().getName());
+            return super.onInviteReceived(invite);
+        }
 
         @Override
         public boolean onMessageReceived(MMXMessage mmxMessage) {

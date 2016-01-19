@@ -1,5 +1,6 @@
 package com.magnet.imessage.model;
 
+import com.magnet.imessage.helpers.DateHelper;
 import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMXMessage;
 import com.magnet.mmx.client.internal.channel.PubSubItemChannel;
@@ -97,9 +98,10 @@ public class Message {
         message.setSender(sender);
         message.setCreateTime(0);
         message.setMessageId(itemChannel.getItemId());
-//        message.setCreateTime(itemChannel.getMetaData().getCreationDate());
+        message.setCreateTime(DateHelper.getDateFromString(itemChannel.getMetaData().getCreationDate()));
         return message;
     }
+
 
     public static Map<String, String> makeContent(String text) {
         Map<String, String> content = new HashMap<>();

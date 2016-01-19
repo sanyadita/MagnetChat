@@ -1,7 +1,12 @@
 package com.magnet.imessage.ui;
 
+import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
@@ -22,7 +27,11 @@ import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
 import com.magnet.mmx.client.internal.channel.UserInfo;
 
+import java.util.HashMap;
 import java.util.List;
+
+import nl.changer.polypicker.Config;
+import nl.changer.polypicker.ImagePickerActivity;
 
 public class ChatActivity extends BaseActivity {
 
@@ -30,16 +39,23 @@ public class ChatActivity extends BaseActivity {
     public static final String TAG_CREATE_WITH_USER_ID = "createWithUserId";
     public static final String TAG_CREATE_NEW = "createNew";
 
+    private static final String[] ATTACHMENT_VARIANTS = {"Send photo", "Send location", "Send video", "Cancel"};
+
+    public static final int INTENT_REQUEST_GET_IMAGES = 14;
+    public static final int INTENT_SELECT_VIDEO = 13;
+
     private Conversation currentConversation;
     private MessagesAdapter adapter;
     private RecyclerView messagesListView;
     private String channelName;
+    private AlertDialog attachmentDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
         findViewById(R.id.chatSendBtn).setOnClickListener(this);
+        findViewById(R.id.chatAddAttachment).setOnClickListener(this);
 
         messagesListView = (RecyclerView) findViewById(R.id.chatMessageList);
         final LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -47,6 +63,7 @@ public class ChatActivity extends BaseActivity {
         layoutManager.setStackFromEnd(true);
         layoutManager.setReverseLayout(false);
         messagesListView.setLayoutManager(layoutManager);
+        gpsTracker = new GPSTracker(this);
 
         if (getIntent().getBooleanExtra(TAG_CREATE_NEW, false)) {
             String userId = getIntent().getStringExtra(TAG_CREATE_WITH_USER_ID);
@@ -83,12 +100,18 @@ public class ChatActivity extends BaseActivity {
                     });
                 }
                 break;
+            case R.id.chatAddAttachment:
+                showAttachmentDialog();
+                break;
         }
     }
 
     @Override
     protected void onPause() {
         MMX.unregisterListener(eventListener);
+        if (attachmentDialog != null && attachmentDialog.isShowing()){
+            attachmentDialog.dismiss();
+        }
         super.onPause();
     }
 
@@ -111,11 +134,104 @@ public class ChatActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menuChatOpenDetails:
-                String name = currentConversation.getChannel().getName();
-                startActivity(DetailsActivity.createIntentForChannel(name));
+                if (currentConversation != null) {
+                    String name = currentConversation.getChannel().getName();
+                    startActivity(DetailsActivity.createIntentForChannel(name));
+                }
                 break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == INTENT_REQUEST_GET_IMAGES) {
+                Parcelable[] parcelableUris = intent.getParcelableArrayExtra(ImagePickerActivity.EXTRA_IMAGE_URIS);
+
+                if (parcelableUris == null) {
+                    return;
+                }
+
+                // Java doesn't allow array casting, this is a little hack
+                Uri[] uris = new Uri[parcelableUris.length];
+                System.arraycopy(parcelableUris, 0, uris, 0, parcelableUris.length);
+
+                if (uris != null && uris.length > 0) {
+                    for (Uri uri : uris) {
+//                        sendMedia(KEY_MESSAGE_IMAGE, uri.toString());
+                    }
+                }
+            } else if (requestCode == INTENT_SELECT_VIDEO) {
+                Uri videoUri = intent.getData();
+//                String videoPath = FileHelper.getPath(this, videoUri);
+//                sendMedia(KEY_MESSAGE_VIDEO, videoPath);
+            }
+        }
+    }
+
+    private void showAttachmentDialog() {
+        if (attachmentDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setItems(ATTACHMENT_VARIANTS, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    switch (which) {
+                        case 0:
+                            break;
+                        case 1:
+                            break;
+                        case 2:
+                            break;
+                        case 3:
+                            attachmentDialog.dismiss();
+                            break;
+                    }
+                }
+            });
+            builder.setCancelable(false);
+            attachmentDialog = builder.create();
+        }
+        attachmentDialog.show();
+    }
+
+    private void selectImage() {
+        Intent intent = new Intent(this, ImagePickerActivity.class);
+        Config config = new Config.Builder()
+                .setTabBackgroundColor(R.color.white)
+                .setSelectionLimit(1)
+                .build();
+        ImagePickerActivity.setConfig(config);
+        startActivityForResult(intent, INTENT_REQUEST_GET_IMAGES);
+    }
+
+    private void selectVideo() {
+        Intent intent = new Intent();
+        intent.setType("video/*");
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent, "Select a Video "), INTENT_SELECT_VIDEO);
+    }
+
+    private void sendLocation() {
+        Location
+        if (gpsTracker.canGetLocation() && gpsTracker.getLatitude() != 0.00 && gpsTracker.getLongitude() != 0.00) {
+            double myLat = gpsTracker.getLatitude();
+            double myLong = gpsTracker.getLongitude();
+            String latlng = (Double.toString(myLat) + "," + Double.toString(myLong));
+
+            String username = MMX.getCurrentUser().getDisplayName();
+            updateList(username, KEY_MESSAGE_MAP, latlng, false);
+
+            HashMap<String, String> content = new HashMap<>();
+            content.put("type", KEY_MESSAGE_MAP);
+            content.put("latitude", Double.toString(myLat));
+            content.put("longitude", Double.toString(myLong));
+            send(content);
+        }else{
+            mGPS.showSettingsAlert(this);
+        }
     }
 
     private void setMessagesList(List<Message> messages) {
@@ -131,6 +247,9 @@ public class ChatActivity extends BaseActivity {
     }
 
     private void prepareConversation(Conversation conversation) {
+        if (CurrentApplication.getInstance().getConversations().get(conversation.getChannel().getName()) == null) {
+            finish();
+        }
         currentConversation = conversation;
         List<UserInfo> suppliersList = conversation.getSuppliersList();
         if (conversation.getSuppliers().size() == 1) {
@@ -147,16 +266,14 @@ public class ChatActivity extends BaseActivity {
     private ChannelHelper.OnCreateChannelListener createListener = new ChannelHelper.OnCreateChannelListener() {
         @Override
         public void onSuccessCreated(MMXChannel channel) {
-                ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
-//                ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
+            ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
         }
 
         @Override
         public void onChannelExists(MMXChannel channel) {
             currentConversation = CurrentApplication.getInstance().getConversationByName(channel.getName());
             if (currentConversation == null) {
-                    ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
-//                    ChannelHelper.getInstance().readChannelInfoOld(channel, readChannelInfoListener);
+                ChannelHelper.getInstance().readChannelInfo(channel, readChannelInfoListener);
             } else {
                 prepareConversation(currentConversation);
                 MMX.registerListener(eventListener);
@@ -173,7 +290,12 @@ public class ChatActivity extends BaseActivity {
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
         public void onSuccessFinish(Conversation lastConversation) {
-            prepareConversation(lastConversation);
+            if (lastConversation == null) {
+                showMessage("Can't start conversation");
+                finish();
+            } else {
+                prepareConversation(lastConversation);
+            }
         }
 
         @Override

@@ -17,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.SearchView;
 import android.widget.TextView;
 
 import com.magnet.imessage.R;
@@ -24,6 +25,7 @@ import com.magnet.imessage.core.CurrentApplication;
 import com.magnet.imessage.helpers.ChannelHelper;
 import com.magnet.imessage.helpers.UserHelper;
 import com.magnet.imessage.model.Conversation;
+import com.magnet.imessage.model.Message;
 import com.magnet.imessage.ui.adapters.ConversationsAdapter;
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiError;
@@ -32,6 +34,9 @@ import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class HomeActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener, AdapterView.OnItemClickListener {
 
     private DrawerLayout drawer;
@@ -39,6 +44,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private ConversationsAdapter adapter;
     private ListView conversationsList;
     private AlertDialog leaveDialog;
+    private Thread searchThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +57,33 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(username);
         setSupportActionBar(toolbar);
+
+        SearchView searchView = (SearchView) findViewById(R.id.homeSearch);
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                if (searchThread == null) {
+                    createSearchThread(query);
+                }
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (newText.isEmpty()) {
+                    hideKeyboard();
+                    showList(CurrentApplication.getInstance().getConversations());
+                }
+                return false;
+            }
+        });
+        searchView.setOnCloseListener(new SearchView.OnCloseListener() {
+            @Override
+            public boolean onClose() {
+                showList(CurrentApplication.getInstance().getConversations());
+                return true;
+            }
+        });
 
         drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -143,6 +176,10 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         if (leaveDialog != null && leaveDialog.isShowing()) {
             leaveDialog.dismiss();
         }
+        if (searchThread != null) {
+            searchThread.interrupt();
+            searchThread = null;
+        }
         super.onPause();
     }
 
@@ -151,9 +188,9 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
 
     }
 
-    private void showList() {
+    private void showList(Map<String, Conversation> conversationMap) {
         findViewById(R.id.homeProgress).setVisibility(View.GONE);
-        adapter = new ConversationsAdapter(this, CurrentApplication.getInstance().getConversations());
+        adapter = new ConversationsAdapter(this, conversationMap);
         conversationsList.setAdapter(adapter);
     }
 
@@ -198,13 +235,50 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         leaveDialog.show();
     }
 
+    private void createSearchThread(final String query) {
+        searchThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final Map<String, Conversation> searchResult = new LinkedHashMap<>();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
+                        showList(searchResult);
+                    }
+                });
+                for (Conversation conversation : CurrentApplication.getInstance().getConversations().values()) {
+                    for (Message message : conversation.getMessages()) {
+                        if (message.getText().toLowerCase().contains(query.toLowerCase())) {
+                            searchResult.put(conversation.getChannel().getName(), conversation);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateList();
+                                }
+                            });
+                        }
+                    }
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                    }
+                });
+                searchThread = null;
+            }
+        });
+        searchThread.start();
+    }
+
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
         public void onSuccessFinish(Conversation lastConversation) {
             if (adapter != null) {
                 adapter.notifyDataSetChanged();
             } else {
-                showList();
+                showList(CurrentApplication.getInstance().getConversations());
             }
         }
 
@@ -251,13 +325,6 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         @Override
         public boolean onInviteResponseReceived(MMXChannel.MMXInviteResponse inviteResponse) {
             Logger.debug("onInviteResponseReceived");
-            updateList();
-            return false;
-        }
-
-        @Override
-        public boolean onLoginRequired(MMX.LoginReason reason) {
-            Logger.debug("onLoginRequired");
             updateList();
             return false;
         }

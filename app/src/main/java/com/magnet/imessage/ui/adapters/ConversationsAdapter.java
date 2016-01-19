@@ -75,6 +75,9 @@ public class ConversationsAdapter extends BaseAdapter {
         } else {
             viewHolder = (ConversationViewHolder) convertView.getTag();
         }
+        if (position >= getCount()) {
+            return convertView;
+        }
         Conversation conversation = getItem(position);
         if (conversation.getSuppliers() != null) {
             if (conversation.getSuppliers().size() == 0) {
@@ -95,7 +98,7 @@ public class ConversationsAdapter extends BaseAdapter {
         } else {
             viewHolder.newMessage.setVisibility(View.INVISIBLE);
         }
-        viewHolder.date.setText(DateHelper.getDateString(conversation.getChannel().getLastTimeActive()));
+        viewHolder.date.setText(DateHelper.getConversationLastDate(conversation.getChannel().getLastTimeActive()));
         List<Message> messages = conversation.getMessages();
         if (messages != null && messages.size() > 0) {
             viewHolder.lastMessage.setText(messages.get(messages.size() - 1).getText());

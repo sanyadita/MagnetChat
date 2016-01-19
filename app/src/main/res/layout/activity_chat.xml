@@ -32,6 +32,13 @@
             android:layout_centerVertical="true"
             android:text="Send" />
 
+        <ImageButton
+            android:id="@+id/chatAddAttachment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@mipmap/ic_attachment"
+            android:layout_centerVertical="true" />
+
         <EditText
             android:id="@+id/chatMessageField"
             android:layout_width="match_parent"
@@ -39,6 +46,8 @@
             android:layout_centerVertical="true"
             android:layout_toLeftOf="@+id/chatSendBtn"
             android:layout_toStartOf="@+id/chatSendBtn"
+            android:layout_toRightOf="@+id/chatAddAttachment"
+            android:layout_toEndOf="@+id/chatAddAttachment"
             android:hint="Write a comment..." />
     </RelativeLayout>
 

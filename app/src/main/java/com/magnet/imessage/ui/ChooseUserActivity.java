@@ -7,21 +7,18 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SearchView;
-import android.widget.Toast;
 
 import com.magnet.imessage.R;
 import com.magnet.imessage.core.CurrentApplication;
+import com.magnet.imessage.helpers.ChannelHelper;
 import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.ui.adapters.UsersAdapter;
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiCallback;
 import com.magnet.max.android.ApiError;
 import com.magnet.max.android.User;
-import com.magnet.mmx.client.api.MMXChannel;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ChooseUserActivity extends BaseActivity implements SearchView.OnQueryTextListener, SearchView.OnCloseListener, AdapterView.OnItemClickListener {
 
@@ -90,29 +87,37 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
         return false;
     }
 
-    private void addUserToChannel(User user) {
+    private void addUserToChannel(final User user) {
         findViewById(R.id.chooseUserProgress).setVisibility(View.VISIBLE);
-        if (conversation.getSuppliers().get(user.getUserIdentifier()) == null) {
-            Set<User> userSet = new HashSet<>();
-            userSet.add(user);
-            conversation.getChannel().addSubscribers(userSet, new MMXChannel.OnFinishedListener<List<String>>() {
-                @Override
-                public void onSuccess(List<String> strings) {
-                    findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
-                    finish();
-                }
+        ChannelHelper.getInstance().addUserToConversation(conversation, user, new ChannelHelper.OnAddUserListener() {
+            @Override
+            public void onSuccessAdded() {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                finish();
+            }
 
-                @Override
-                public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                    findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
-                    showMessage("Can't add user to channel");
-                    Logger.error("add user", throwable);
-                }
-            });
-        } else {
-            Toast.makeText(this, "User was already added", Toast.LENGTH_SHORT).show();
-            finish();
-        }
+            @Override
+            public void onUserSetExists(String channelSetName) {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                Conversation anotherConversation = CurrentApplication.getInstance().getConversationByName(channelSetName);
+                startActivity(ChatActivity.getIntentWithChannel(anotherConversation));
+                finish();
+            }
+
+            @Override
+            public void onWasAlreadyAdded() {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                showMessage("User was already added");
+                finish();
+
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);
+                showMessage("Can't add user to channel");
+            }
+        });
     }
 
     private void searchUsers(@NonNull String query) {

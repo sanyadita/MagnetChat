@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/MagnetChat.iml" filepath="$PROJECT_DIR$/MagnetChat.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/magnetmessage.iml" filepath="$PROJECT_DIR$/magnetmessage.iml" />
     </modules>
   </component>
 </project>
