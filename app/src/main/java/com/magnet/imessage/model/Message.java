@@ -1,5 +1,7 @@
 package com.magnet.imessage.model;
 
+import android.location.Location;
+
 import com.magnet.imessage.helpers.DateHelper;
 import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMXMessage;
@@ -11,7 +13,15 @@ import java.util.Map;
 
 public class Message {
 
-    private static final String MESSAGE_TAG = "message";
+    public static final String TYPE_TEXT = "text";
+    public static final String TYPE_PHOTO = "photo";
+    public static final String TYPE_MAP = "location";
+    public static final String TYPE_VIDEO = "video";
+
+    private static final String TAG_TYPE = "type";
+    private static final String TAG_TEXT = "message";
+    private static final String TAG_LONGITUDE = "longitude";
+    private static final String TAG_LATITUDE = "latitude";
 
     private Map<String, String> content;
     private long createTime;
@@ -23,7 +33,21 @@ public class Message {
         if (content == null) {
             return null;
         }
-        return content.get(MESSAGE_TAG);
+        return content.get(TAG_TEXT);
+    }
+
+    public String getType() {
+        if (content == null) {
+            return null;
+        }
+        return content.get(TAG_TYPE);
+    }
+
+    public String getLatitudeLongitude() {
+        if (content == null) {
+            return null;
+        }
+        return content.get(TAG_LATITUDE) + "," + content.get(TAG_LONGITUDE);
     }
 
     public void setContent(Map<String, String> content) {
@@ -102,10 +126,18 @@ public class Message {
         return message;
     }
 
-
     public static Map<String, String> makeContent(String text) {
         Map<String, String> content = new HashMap<>();
-        content.put(MESSAGE_TAG, text);
+        content.put(TAG_TYPE, TYPE_TEXT);
+        content.put(TAG_TEXT, text);
+        return content;
+    }
+
+    public static Map<String, String> makeContent(Location location) {
+        Map<String, String> content = new HashMap<>();
+        content.put(TAG_TYPE, TYPE_MAP);
+        content.put(TAG_LATITUDE, String.format("%.6f", location.getLatitude()));
+        content.put(TAG_LONGITUDE, String.format("%.6f", location.getLongitude()));
         return content;
     }
 

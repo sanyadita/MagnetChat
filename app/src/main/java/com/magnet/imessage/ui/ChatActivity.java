@@ -1,11 +1,18 @@
 package com.magnet.imessage.ui;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -27,13 +34,12 @@ import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
 import com.magnet.mmx.client.internal.channel.UserInfo;
 
-import java.util.HashMap;
 import java.util.List;
 
 import nl.changer.polypicker.Config;
 import nl.changer.polypicker.ImagePickerActivity;
 
-public class ChatActivity extends BaseActivity {
+public class ChatActivity extends BaseActivity {// implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     public static final String TAG_CHANNEL_NAME = "channelName";
     public static final String TAG_CREATE_WITH_USER_ID = "createWithUserId";
@@ -49,6 +55,8 @@ public class ChatActivity extends BaseActivity {
     private RecyclerView messagesListView;
     private String channelName;
     private AlertDialog attachmentDialog;
+    private LocationManager locationManager;
+    private Location currentLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,8 +71,6 @@ public class ChatActivity extends BaseActivity {
         layoutManager.setStackFromEnd(true);
         layoutManager.setReverseLayout(false);
         messagesListView.setLayoutManager(layoutManager);
-        gpsTracker = new GPSTracker(this);
-
         if (getIntent().getBooleanExtra(TAG_CREATE_NEW, false)) {
             String userId = getIntent().getStringExtra(TAG_CREATE_WITH_USER_ID);
             if (userId != null) {
@@ -76,6 +82,30 @@ public class ChatActivity extends BaseActivity {
                 prepareConversation(CurrentApplication.getInstance().getConversationByName(channelName));
             }
         }
+
+        LocationListener locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                currentLocation = location;
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+
+            }
+        };
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
     }
 
     @Override
@@ -84,20 +114,7 @@ public class ChatActivity extends BaseActivity {
             case R.id.chatSendBtn:
                 String text = getFieldText(R.id.chatMessageField);
                 if (text != null && !text.isEmpty()) {
-                    currentConversation.sendMessage(text, new Conversation.OnSendMessageListener() {
-                        @Override
-                        public void onSuccessSend(Message message) {
-                            CurrentApplication.getInstance().getMessagesToApproveDeliver().put(message.getMessageId(), message);
-                            clearFieldText(R.id.chatMessageField);
-                            updateList();
-                        }
-
-                        @Override
-                        public void onFailure(Throwable throwable) {
-                            Logger.error("send messages", throwable);
-                            showMessage("Can't send message");
-                        }
-                    });
+                    sendText(text);
                 }
                 break;
             case R.id.chatAddAttachment:
@@ -109,7 +126,7 @@ public class ChatActivity extends BaseActivity {
     @Override
     protected void onPause() {
         MMX.unregisterListener(eventListener);
-        if (attachmentDialog != null && attachmentDialog.isShowing()){
+        if (attachmentDialog != null && attachmentDialog.isShowing()) {
             attachmentDialog.dismiss();
         }
         super.onPause();
@@ -180,15 +197,18 @@ public class ChatActivity extends BaseActivity {
                 public void onClick(DialogInterface dialog, int which) {
                     switch (which) {
                         case 0:
+                            selectImage();
                             break;
                         case 1:
+                            sendLocation();
                             break;
                         case 2:
+                            selectVideo();
                             break;
                         case 3:
-                            attachmentDialog.dismiss();
                             break;
                     }
+                    attachmentDialog.dismiss();
                 }
             });
             builder.setCancelable(false);
@@ -214,23 +234,19 @@ public class ChatActivity extends BaseActivity {
         startActivityForResult(Intent.createChooser(intent, "Select a Video "), INTENT_SELECT_VIDEO);
     }
 
+    private void sendText(String text) {
+        currentConversation.sendMessage(text, sendMessageListener);
+    }
+
     private void sendLocation() {
-        Location
-        if (gpsTracker.canGetLocation() && gpsTracker.getLatitude() != 0.00 && gpsTracker.getLongitude() != 0.00) {
-            double myLat = gpsTracker.getLatitude();
-            double myLong = gpsTracker.getLongitude();
-            String latlng = (Double.toString(myLat) + "," + Double.toString(myLong));
-
-            String username = MMX.getCurrentUser().getDisplayName();
-            updateList(username, KEY_MESSAGE_MAP, latlng, false);
-
-            HashMap<String, String> content = new HashMap<>();
-            content.put("type", KEY_MESSAGE_MAP);
-            content.put("latitude", Double.toString(myLat));
-            content.put("longitude", Double.toString(myLong));
-            send(content);
-        }else{
-            mGPS.showSettingsAlert(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        if (currentLocation != null) {
+            currentConversation.sendLocation(currentLocation, sendMessageListener);
+        } else {
+            showMessage("Can't get location");
         }
     }
 
@@ -262,6 +278,21 @@ public class ChatActivity extends BaseActivity {
         setText(R.id.chatSuppliers, "To: " + suppliers);
         setMessagesList(conversation.getMessages());
     }
+
+    private Conversation.OnSendMessageListener sendMessageListener = new Conversation.OnSendMessageListener() {
+        @Override
+        public void onSuccessSend(Message message) {
+            CurrentApplication.getInstance().getMessagesToApproveDeliver().put(message.getMessageId(), message);
+            clearFieldText(R.id.chatMessageField);
+            updateList();
+        }
+
+        @Override
+        public void onFailure(Throwable throwable) {
+            Logger.error("send messages", throwable);
+            showMessage("Can't send message");
+        }
+    };
 
     private ChannelHelper.OnCreateChannelListener createListener = new ChannelHelper.OnCreateChannelListener() {
         @Override
@@ -337,5 +368,4 @@ public class ChatActivity extends BaseActivity {
         intent.putExtra(TAG_CREATE_WITH_USER_ID, userId);
         return intent;
     }
-
 }

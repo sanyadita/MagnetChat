@@ -1,5 +1,7 @@
 package com.magnet.imessage.model;
 
+import android.location.Location;
+
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMXChannel;
@@ -104,6 +106,56 @@ public class Conversation {
     }
 
     public void sendMessage(final String text, final OnSendMessageListener listener) {
+        if (channel != null) {
+            Map<String, String> content = Message.makeContent(text);
+            final Message message = new Message();
+            message.setContent(content);
+            message.setCreateTime(System.currentTimeMillis());
+            channel.publish(content, new MMXChannel.OnFinishedListener<String>() {
+                @Override
+                public void onSuccess(String s) {
+                    Logger.debug("send message", "success");
+                    message.setMessageId(s);
+                    addMessage(message);
+                    listener.onSuccessSend(message);
+                }
+
+                @Override
+                public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                    listener.onFailure(throwable);
+                }
+            });
+        } else {
+            throw new Error();
+        }
+    }
+
+    public void sendLocation(Location location, final OnSendMessageListener listener) {
+        if (channel != null) {
+            Map<String, String> content = Message.makeContent(location);
+            final Message message = new Message();
+            message.setContent(content);
+            message.setCreateTime(System.currentTimeMillis());
+            channel.publish(content, new MMXChannel.OnFinishedListener<String>() {
+                @Override
+                public void onSuccess(String s) {
+                    Logger.debug("send message", "success");
+                    message.setMessageId(s);
+                    addMessage(message);
+                    listener.onSuccessSend(message);
+                }
+
+                @Override
+                public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                    listener.onFailure(throwable);
+                }
+            });
+        } else {
+            throw new Error();
+        }
+    }
+
+    public void sendMedia(final String text, final OnSendMessageListener listener) {
         if (channel != null) {
             Map<String, String> content = Message.makeContent(text);
             final Message message = new Message();

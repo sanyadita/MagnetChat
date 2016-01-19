@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.magnet.imessage">
 
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:name=".core.CurrentApplication"
@@ -32,7 +34,10 @@
         <activity
             android:name=".ui.ChatActivity"
             android:label="Chat" />
-        <activity android:name=".ui.DetailsActivity"/>
+        <activity android:name=".ui.DetailsActivity" />
+        <activity
+            android:name="nl.changer.polypicker.ImagePickerActivity"
+            android:theme="@style/AppTheme" />
     </application>
 
 </manifest>

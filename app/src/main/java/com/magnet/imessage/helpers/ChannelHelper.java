@@ -163,21 +163,7 @@ public class ChannelHelper {
                             }
                         });
                     } else {
-                        conversation.getChannel().delete(new MMXChannel.OnFinishedListener<Void>() {
-                            @Override
-                            public void onSuccess(Void aVoid) {
-                                Logger.debug("delete old", "success");
-                                String channelName = conversation.getChannel().getName();
-                                CurrentApplication.getInstance().getConversations().remove(channelName);
-                                listener.onUserSetExists(mmxChannels.get(0).getName());
-                            }
-
-                            @Override
-                            public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                                Logger.error("add user", throwable);
-                                listener.onFailure(throwable);
-                            }
-                        });
+                        listener.onUserSetExists(mmxChannels.get(0).getName());
                     }
                 }
 
