@@ -13,6 +13,9 @@ import java.util.Map;
 
 public class Message {
 
+    public static final String FILE_TYPE_VIDEO = "video/*";
+    public static final String FILE_TYPE_PHOTO = "image/*";
+
     public static final String TYPE_TEXT = "text";
     public static final String TYPE_PHOTO = "photo";
     public static final String TYPE_MAP = "location";
@@ -22,6 +25,7 @@ public class Message {
     private static final String TAG_TEXT = "message";
     private static final String TAG_LONGITUDE = "longitude";
     private static final String TAG_LATITUDE = "latitude";
+    private static final String TAG_URL = "url";
 
     private Map<String, String> content;
     private long createTime;
@@ -48,6 +52,13 @@ public class Message {
             return null;
         }
         return content.get(TAG_LATITUDE) + "," + content.get(TAG_LONGITUDE);
+    }
+
+    public String getUrl() {
+        if (content == null) {
+            return null;
+        }
+        return content.get(TAG_URL);
     }
 
     public void setContent(Map<String, String> content) {
@@ -138,6 +149,13 @@ public class Message {
         content.put(TAG_TYPE, TYPE_MAP);
         content.put(TAG_LATITUDE, String.format("%.6f", location.getLatitude()));
         content.put(TAG_LONGITUDE, String.format("%.6f", location.getLongitude()));
+        return content;
+    }
+
+    public static Map<String, String> makeMediaContent(String fileUrl, String type) {
+        Map<String, String> content = new HashMap<>();
+        content.put(TAG_TYPE, type);
+        content.put(TAG_URL, fileUrl);
         return content;
     }
 

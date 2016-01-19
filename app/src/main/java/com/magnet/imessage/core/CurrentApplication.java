@@ -1,6 +1,9 @@
 package com.magnet.imessage.core;
 
-import android.app.Application;
+import android.content.Context;
+import android.content.Intent;
+import android.support.multidex.MultiDex;
+import android.support.multidex.MultiDexApplication;
 
 import com.magnet.imessage.R;
 import com.magnet.imessage.helpers.ChannelHelper;
@@ -21,7 +24,7 @@ import com.magnet.mmx.client.api.MMXMessage;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CurrentApplication extends Application {
+public class CurrentApplication extends MultiDexApplication {
 
     private static CurrentApplication instance;
 
@@ -36,6 +39,13 @@ public class CurrentApplication extends Application {
         UserPreference.getInstance(this);
         InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
+        MMX.registerWakeupBroadcast(this, new Intent("MMX_WAKEUP_ACTION"));
+    }
+
+    //Enable MultiDex
+    public void attachBaseContext(Context base) {
+        MultiDex.install(base);
+        super.attachBaseContext(base);
     }
 
     public static CurrentApplication getInstance() {

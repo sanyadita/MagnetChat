@@ -1,7 +1,9 @@
 package com.magnet.imessage.ui.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -19,6 +21,7 @@ import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHolder> {
 
@@ -28,13 +31,14 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private List<String> dates;
     private Context context;
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         LinearLayout messageArea;
         TextView date;
         TextView sender;
         TextView text;
         TextView delivered;
         ImageView image;
+        Message message;
 
         public ViewHolder(View itemView) {
             super(itemView);
@@ -44,7 +48,39 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
             this.image = (ImageView) itemView.findViewById(R.id.itemMessageImage);
             this.text = (TextView) itemView.findViewById(R.id.itemMessageText);
             this.delivered = (TextView) itemView.findViewById(R.id.itemMessageDelivered);
+            this.image.setOnClickListener(this);
         }
+
+        @Override
+        public void onClick(View v) {
+            Intent intent;
+            if (message.getType() != null) {
+                switch (message.getType()) {
+                    case Message.TYPE_MAP:
+                        String uri = String.format(Locale.ENGLISH, "geo:%s", message.getLatitudeLongitude());
+                        intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                        context.startActivity(intent);
+                        break;
+                    case Message.TYPE_VIDEO:
+                        String newVideoPath = message.getUrl();
+                        if (newVideoPath != null) {
+                            intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newVideoPath));
+                            intent.setDataAndType(Uri.parse(newVideoPath), "video/*");
+                            context.startActivity(intent);
+                        }
+                        break;
+                    case Message.TYPE_PHOTO:
+                        String newImagePath = message.getUrl();
+                        if (newImagePath != null) {
+                            intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newImagePath));
+                            intent.setDataAndType(Uri.parse(newImagePath), "image/*");
+                            context.startActivity(intent);
+                        }
+                        break;
+                }
+            }
+        }
+
     }
 
     public MessagesAdapter(Context context, List<Message> messages) {
@@ -74,17 +110,8 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
             return;
         }
         Message message = getItem(position);
-        String msgDay = DateHelper.getMessageDay(message.getCreateTime());
-        if (!dates.contains(msgDay)) {
-            firstMsgIdxs.add(position);
-            dates.add(msgDay);
-        }
-        if (firstMsgIdxs.contains(position)) {
-            holder.date.setVisibility(View.VISIBLE);
-            holder.date.setText(String.format("%s %s", msgDay, DateHelper.getTime(message.getCreateTime())));
-        } else {
-            holder.date.setVisibility(View.GONE);
-        }
+        holder.message = message;
+        configureDate(holder, message, position);
         if (message.getSender() == null || User.getCurrentUserId().equals(message.getSender().getUserId())) {
             makeMessageFromMe(holder, message);
         } else {
@@ -93,30 +120,20 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         if (message.getType() != null) {
             switch (message.getType()) {
                 case Message.TYPE_MAP:
-                    holder.text.setVisibility(View.GONE);
-                    holder.image.setVisibility(View.VISIBLE);
-                    String loc = "http://maps.google.com/maps/api/staticmap?center=" + message.getLatitudeLongitude() + "&zoom=18&size=700x300&sensor=false&markers=color:blue%7Clabel:S%7C" + message.getLatitudeLongitude();
-//                holder.image.setImageURI(Uri.parse(loc));
-                    Picasso.with(context).load(loc).into(holder.image);
+                    configureMapMsg(holder, message);
                     break;
                 case Message.TYPE_VIDEO:
-                    holder.text.setVisibility(View.GONE);
-                    holder.image.setVisibility(View.VISIBLE);
+                    configureVideoMsg(holder, message);
                     break;
                 case Message.TYPE_PHOTO:
-                    holder.text.setVisibility(View.GONE);
-                    holder.image.setVisibility(View.VISIBLE);
+                    configureImageMsg(holder,message);
                     break;
                 case Message.TYPE_TEXT:
-                    holder.text.setText(message.getText());
-                    holder.text.setVisibility(View.VISIBLE);
-                    holder.image.setVisibility(View.GONE);
+                    configureTextMsg(holder, message);
                     break;
             }
         } else {
-            holder.text.setText(message.getText());
-            holder.text.setVisibility(View.VISIBLE);
-            holder.image.setVisibility(View.GONE);
+            configureTextMsg(holder, message);
         }
     }
 
@@ -129,8 +146,23 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         return messageList.get(position);
     }
 
+    private void configureDate(ViewHolder viewHolder, Message message, int position) {
+        String msgDay = DateHelper.getMessageDay(message.getCreateTime());
+        if (!dates.contains(msgDay)) {
+            firstMsgIdxs.add(position);
+            dates.add(msgDay);
+        }
+        if (firstMsgIdxs.contains(position)) {
+            viewHolder.date.setVisibility(View.VISIBLE);
+            viewHolder.date.setText(String.format("%s %s", msgDay, DateHelper.getTime(message.getCreateTime())));
+        } else {
+            viewHolder.date.setVisibility(View.GONE);
+        }
+    }
+
     private void makeMessageToMe(ViewHolder viewHolder, Message message) {
         viewHolder.messageArea.setGravity(Gravity.LEFT | Gravity.START);
+        viewHolder.image.setLayoutParams(viewHolder.messageArea.getLayoutParams());
         viewHolder.text.setBackgroundResource(R.drawable.msg_received);
         viewHolder.text.setTextColor(Color.BLACK);
         viewHolder.delivered.setVisibility(View.GONE);
@@ -150,6 +182,35 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         } else {
             viewHolder.delivered.setVisibility(View.GONE);
         }
+    }
+
+    private void configureMediaMsg(ViewHolder holder) {
+        holder.text.setVisibility(View.GONE);
+        holder.image.setVisibility(View.VISIBLE);
+    }
+
+    private void configureMapMsg(ViewHolder holder, Message message) {
+        configureMediaMsg(holder);
+        String loc = "http://maps.google.com/maps/api/staticmap?center=" + message.getLatitudeLongitude() + "&zoom=18&size=700x300&sensor=false&markers=color:blue%7Clabel:S%7C" + message.getLatitudeLongitude();
+        Picasso.with(context).load(loc).into(holder.image);
+    }
+
+    private void configureVideoMsg(ViewHolder holder, Message message) {
+        configureMediaMsg(holder);
+        holder.image.setImageResource(R.drawable.video_message);
+    }
+
+    private void configureImageMsg(ViewHolder holder, Message message) {
+        configureMediaMsg(holder);
+        if (message.getUrl() != null) {
+            Picasso.with(context).load(message.getUrl()).into(holder.image);
+        }
+    }
+
+    private void configureTextMsg(ViewHolder holder, Message message) {
+        holder.text.setText(message.getText());
+        holder.text.setVisibility(View.VISIBLE);
+        holder.image.setVisibility(View.GONE);
     }
 
 }

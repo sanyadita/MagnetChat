@@ -128,6 +128,10 @@ public class UserHelper {
         });
     }
 
+    public String userNameAsString(User user) {
+        return String.format("%s %s", user.getFirstName(), user.getLastName());
+    }
+
     public String userNamesAsString(List<UserInfo> userList) {
         String users = "";
         for (int i = 0; i < userList.size(); i++) {

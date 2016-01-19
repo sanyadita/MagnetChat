@@ -2,13 +2,10 @@ package com.magnet.imessage.ui;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
@@ -20,9 +17,13 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 import com.magnet.imessage.R;
 import com.magnet.imessage.core.CurrentApplication;
 import com.magnet.imessage.helpers.ChannelHelper;
+import com.magnet.imessage.helpers.FileHelper;
 import com.magnet.imessage.helpers.UserHelper;
 import com.magnet.imessage.model.Conversation;
 import com.magnet.imessage.model.Message;
@@ -39,7 +40,7 @@ import java.util.List;
 import nl.changer.polypicker.Config;
 import nl.changer.polypicker.ImagePickerActivity;
 
-public class ChatActivity extends BaseActivity {// implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class ChatActivity extends BaseActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     public static final String TAG_CHANNEL_NAME = "channelName";
     public static final String TAG_CREATE_WITH_USER_ID = "createWithUserId";
@@ -55,8 +56,7 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
     private RecyclerView messagesListView;
     private String channelName;
     private AlertDialog attachmentDialog;
-    private LocationManager locationManager;
-    private Location currentLocation;
+    private GoogleApiClient googleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,29 +83,8 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
             }
         }
 
-        LocationListener locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                currentLocation = location;
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-
-            }
-        };
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        googleApiClient = new GoogleApiClient.Builder(this).addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this).addApi(LocationServices.API).build();
     }
 
     @Override
@@ -142,6 +121,18 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
     }
 
     @Override
+    protected void onStart() {
+        googleApiClient.connect();
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        googleApiClient.disconnect();
+        super.onStop();
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_chat, menu);
         return true;
@@ -167,26 +158,37 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == INTENT_REQUEST_GET_IMAGES) {
                 Parcelable[] parcelableUris = intent.getParcelableArrayExtra(ImagePickerActivity.EXTRA_IMAGE_URIS);
-
                 if (parcelableUris == null) {
                     return;
                 }
-
-                // Java doesn't allow array casting, this is a little hack
                 Uri[] uris = new Uri[parcelableUris.length];
                 System.arraycopy(parcelableUris, 0, uris, 0, parcelableUris.length);
 
                 if (uris != null && uris.length > 0) {
                     for (Uri uri : uris) {
-//                        sendMedia(KEY_MESSAGE_IMAGE, uri.toString());
+                        findViewById(R.id.chatMessageProgress).setVisibility(View.VISIBLE);
+                        currentConversation.sendMedia(uri.toString(), Message.TYPE_PHOTO, sendMessageListener);
                     }
                 }
             } else if (requestCode == INTENT_SELECT_VIDEO) {
+                findViewById(R.id.chatMessageProgress).setVisibility(View.VISIBLE);
                 Uri videoUri = intent.getData();
-//                String videoPath = FileHelper.getPath(this, videoUri);
-//                sendMedia(KEY_MESSAGE_VIDEO, videoPath);
+                String videoPath = FileHelper.getPath(this, videoUri);
+                currentConversation.sendMedia(videoPath, Message.TYPE_VIDEO, sendMessageListener);
             }
         }
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
     }
 
     private void showAttachmentDialog() {
@@ -235,7 +237,7 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
     }
 
     private void sendText(String text) {
-        currentConversation.sendMessage(text, sendMessageListener);
+        currentConversation.sendTextMessage(text, sendMessageListener);
     }
 
     private void sendLocation() {
@@ -243,6 +245,7 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+        Location currentLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
         if (currentLocation != null) {
             currentConversation.sendLocation(currentLocation, sendMessageListener);
         } else {
@@ -282,6 +285,7 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
     private Conversation.OnSendMessageListener sendMessageListener = new Conversation.OnSendMessageListener() {
         @Override
         public void onSuccessSend(Message message) {
+            findViewById(R.id.chatMessageProgress).setVisibility(View.GONE);
             CurrentApplication.getInstance().getMessagesToApproveDeliver().put(message.getMessageId(), message);
             clearFieldText(R.id.chatMessageField);
             updateList();
@@ -289,6 +293,7 @@ public class ChatActivity extends BaseActivity {// implements GoogleApiClient.Co
 
         @Override
         public void onFailure(Throwable throwable) {
+            findViewById(R.id.chatMessageProgress).setVisibility(View.GONE);
             Logger.error("send messages", throwable);
             showMessage("Can't send message");
         }
