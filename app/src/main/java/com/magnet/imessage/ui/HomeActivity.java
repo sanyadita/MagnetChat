@@ -249,7 +249,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
                 });
                 for (Conversation conversation : CurrentApplication.getInstance().getConversations().values()) {
                     for (Message message : conversation.getMessages()) {
-                        if (message.getText().toLowerCase().contains(query.toLowerCase())) {
+                        if (message.getText() != null && message.getText().toLowerCase().contains(query.toLowerCase())) {
                             searchResult.put(conversation.getChannel().getName(), conversation);
                             runOnUiThread(new Runnable() {
                                 @Override

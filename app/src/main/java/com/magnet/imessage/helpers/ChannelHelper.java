@@ -242,10 +242,10 @@ public class ChannelHelper {
     }
 
     public void receiveMessage(MMXMessage mmxMessage) {
+        Message message = Message.createMessageFrom(mmxMessage);
         if (mmxMessage.getChannel() != null) {
             Conversation conversation = CurrentApplication.getInstance().getConversationByName(mmxMessage.getChannel().getName());
             if (conversation != null) {
-                Message message = Message.createMessageFrom(mmxMessage);
                 conversation.addMessage(message);
                 UserInfo sender = message.getSender();
                 if (sender != null && sender.getUserId() != null) {

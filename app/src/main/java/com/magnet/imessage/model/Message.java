@@ -9,6 +9,7 @@ import com.magnet.mmx.client.internal.channel.PubSubItemChannel;
 import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class Message {
@@ -147,8 +148,8 @@ public class Message {
     public static Map<String, String> makeContent(Location location) {
         Map<String, String> content = new HashMap<>();
         content.put(TAG_TYPE, TYPE_MAP);
-        content.put(TAG_LATITUDE, String.format("%.6f", location.getLatitude()));
-        content.put(TAG_LONGITUDE, String.format("%.6f", location.getLongitude()));
+        content.put(TAG_LATITUDE, String.format(Locale.ENGLISH, "%.6f", location.getLatitude()));
+        content.put(TAG_LONGITUDE, String.format(Locale.ENGLISH, "%.6f", location.getLongitude()));
         return content;
     }
 
