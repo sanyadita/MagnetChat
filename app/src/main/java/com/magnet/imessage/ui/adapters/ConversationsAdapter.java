@@ -101,7 +101,25 @@ public class ConversationsAdapter extends BaseAdapter {
         viewHolder.date.setText(DateHelper.getConversationLastDate(conversation.getChannel().getLastTimeActive()));
         List<Message> messages = conversation.getMessages();
         if (messages != null && messages.size() > 0) {
-            viewHolder.lastMessage.setText(messages.get(messages.size() - 1).getText());
+            Message message = messages.get(messages.size() - 1);
+            if (message.getType() != null) {
+                switch (message.getType()) {
+                    case Message.TYPE_MAP:
+                        viewHolder.lastMessage.setText("User's location");
+                        break;
+                    case Message.TYPE_VIDEO:
+                        viewHolder.lastMessage.setText("User's video");
+                        break;
+                    case Message.TYPE_PHOTO:
+                        viewHolder.lastMessage.setText("User's photo");
+                        break;
+                    case Message.TYPE_TEXT:
+                        viewHolder.lastMessage.setText(message.getText());
+                        break;
+                }
+            } else {
+                viewHolder.lastMessage.setText(message.getText());
+            }
         }
         return convertView;
     }

@@ -24,6 +24,7 @@ public class LoginActivity extends BaseActivity {
         setOnClickListeners(R.id.loginCreateAccountBtn, R.id.loginForgotPaswordBtn, R.id.loginSignInBtn);
         remember = (CheckBox) findViewById(R.id.loginRemember);
         String[] credence = UserPreference.getInstance().readCredence();
+        User user = User.getCurrentUser();
         if (User.getCurrentUser() != null) {
             startActivity(new Intent(LoginActivity.this, HomeActivity.class));
             finish();
@@ -102,9 +103,13 @@ public class LoginActivity extends BaseActivity {
 
         @Override
         public void onFailedLogin(ApiError apiError) {
-            Logger.error("login", apiError);
-            showLoginFailed();
-            changeLoginMode(false);
+            if (apiError.getKind() == 12) {
+                onSuccess();
+            } else {
+                Logger.error("login", apiError);
+                showLoginFailed();
+                changeLoginMode(false);
+            }
         }
     };
 

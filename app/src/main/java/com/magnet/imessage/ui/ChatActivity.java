@@ -266,7 +266,7 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
     }
 
     private void prepareConversation(Conversation conversation) {
-        if (CurrentApplication.getInstance().getConversations().get(conversation.getChannel().getName()) == null) {
+        if (conversation.getChannel().getName() ==null || CurrentApplication.getInstance().getConversations().get(conversation.getChannel().getName()) == null) {
             finish();
         }
         currentConversation = conversation;

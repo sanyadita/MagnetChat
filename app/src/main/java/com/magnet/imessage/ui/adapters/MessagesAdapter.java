@@ -2,7 +2,9 @@ package com.magnet.imessage.ui.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
@@ -17,8 +19,12 @@ import com.magnet.imessage.R;
 import com.magnet.imessage.helpers.DateHelper;
 import com.magnet.imessage.model.Message;
 import com.magnet.max.android.User;
+import com.squareup.picasso.NetworkPolicy;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -57,7 +63,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
             if (message.getType() != null) {
                 switch (message.getType()) {
                     case Message.TYPE_MAP:
-                        String uri = String.format(Locale.ENGLISH, "geo:%s", message.getLatitudeLongitude());
+                        String uri = String.format(Locale.ENGLISH, "geo:%s?z=16&q=%s", message.getLatitudeLongitude(), message.getLatitudeLongitude());
                         intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
                         context.startActivity(intent);
                         break;
@@ -126,7 +132,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
                     configureVideoMsg(holder, message);
                     break;
                 case Message.TYPE_PHOTO:
-                    configureImageMsg(holder,message);
+                    configureImageMsg(holder, message);
                     break;
                 case Message.TYPE_TEXT:
                     configureTextMsg(holder, message);
@@ -162,7 +168,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
 
     private void makeMessageToMe(ViewHolder viewHolder, Message message) {
         viewHolder.messageArea.setGravity(Gravity.LEFT | Gravity.START);
-        viewHolder.image.setLayoutParams(viewHolder.messageArea.getLayoutParams());
         viewHolder.text.setBackgroundResource(R.drawable.msg_received);
         viewHolder.text.setTextColor(Color.BLACK);
         viewHolder.delivered.setVisibility(View.GONE);
@@ -203,7 +208,35 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private void configureImageMsg(ViewHolder holder, Message message) {
         configureMediaMsg(holder);
         if (message.getUrl() != null) {
-            Picasso.with(context).load(message.getUrl()).into(holder.image);
+            Target target = new Target() {
+                @Override
+                public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            File file = new File(context.getCacheDir(), "saved.jpg");
+                            try {
+                                file.createNewFile();
+                                FileOutputStream ostream = new FileOutputStream(file);
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, ostream);
+                                ostream.close();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
+                }
+
+                @Override
+                public void onBitmapFailed(Drawable errorDrawable) {
+                }
+
+                @Override
+                public void onPrepareLoad(Drawable placeHolderDrawable) {
+                }
+            };
+            Picasso.with(context).load(message.getUrl()).networkPolicy(NetworkPolicy.OFFLINE).placeholder(R.drawable.photo_msg).into(target);
         }
     }
 
