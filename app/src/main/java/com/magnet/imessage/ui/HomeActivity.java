@@ -83,7 +83,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         searchView.setOnCloseListener(new SearchView.OnCloseListener() {
             @Override
             public boolean onClose() {
-                showList(CurrentApplication.getInstance().getConversations());
+                showAllConversations();
                 return true;
             }
         });
@@ -166,7 +166,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     protected void onResume() {
         super.onResume();
 
-        showList(CurrentApplication.getInstance().getConversations());
+        showAllConversations();
 
         MMX.registerListener(eventListener);
         registerReceiver(onAddedConversation, new IntentFilter("com.magnet.imessage.ADDED_CONVERSATION"));
@@ -189,6 +189,10 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     @Override
     public void onClick(View v) {
 
+    }
+
+    private void showAllConversations() {
+        showList(CurrentApplication.getInstance().getConversations());
     }
 
     private void showList(Map<String, Conversation> conversationMap) {
@@ -356,7 +360,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private BroadcastReceiver onAddedConversation = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            updateList();
+            showAllConversations();
         }
     };
 
