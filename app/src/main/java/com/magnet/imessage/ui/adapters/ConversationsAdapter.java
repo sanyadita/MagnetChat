@@ -17,13 +17,11 @@ import com.magnet.max.android.User;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class ConversationsAdapter extends BaseAdapter {
 
     private LayoutInflater inflater;
-    private Map<String, Conversation> conversationMap;
-    private ArrayList<String> keys;
+    private List<Conversation> conversations;
 
     private class ConversationViewHolder {
         ImageView newMessage;
@@ -33,31 +31,24 @@ public class ConversationsAdapter extends BaseAdapter {
         TextView lastMessage;
     }
 
-    public ConversationsAdapter(Context context, Map<String, Conversation> conversations) {
+    public ConversationsAdapter(Context context, List<Conversation> conversations) {
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        this.conversationMap = conversations;
-        keys = new ArrayList<>(conversations.keySet());
+        this.conversations = conversations;
     }
 
     @Override
     public int getCount() {
-        return conversationMap.size();
+        return conversations.size();
     }
 
     @Override
     public Conversation getItem(int position) {
-        return conversationMap.get(keys.get(position));
+        return conversations.get(position);
     }
 
     @Override
     public long getItemId(int position) {
         return position;
-    }
-
-    @Override
-    public void notifyDataSetChanged() {
-        keys = new ArrayList<>(conversationMap.keySet());
-        super.notifyDataSetChanged();
     }
 
     @Override

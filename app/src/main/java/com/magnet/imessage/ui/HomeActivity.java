@@ -34,7 +34,9 @@ import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HomeActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener, AdapterView.OnItemClickListener {
@@ -43,6 +45,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private String username;
     private ConversationsAdapter adapter;
     private ListView conversationsList;
+    private List<Conversation> conversations;
     private AlertDialog leaveDialog;
     private Thread searchThread;
 
@@ -63,7 +66,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
             @Override
             public boolean onQueryTextSubmit(String query) {
                 if (searchThread == null) {
-                    createSearchThread(query);
+                    searchMessage(query);
                 }
                 return true;
             }
@@ -162,9 +165,9 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     @Override
     protected void onResume() {
         super.onResume();
-        if (adapter != null) {
-            adapter.notifyDataSetChanged();
-        }
+
+        showList(CurrentApplication.getInstance().getConversations());
+
         MMX.registerListener(eventListener);
         registerReceiver(onAddedConversation, new IntentFilter("com.magnet.imessage.ADDED_CONVERSATION"));
     }
@@ -190,8 +193,15 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
 
     private void showList(Map<String, Conversation> conversationMap) {
         findViewById(R.id.homeProgress).setVisibility(View.GONE);
-        adapter = new ConversationsAdapter(this, conversationMap);
-        conversationsList.setAdapter(adapter);
+        if(null == adapter) {
+            conversations = new ArrayList<>(conversationMap.values());
+            adapter = new ConversationsAdapter(this, conversations);
+            conversationsList.setAdapter(adapter);
+        } else {
+            conversations.clear();
+            conversations.addAll(conversationMap.values());
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void updateList() {
@@ -235,51 +245,57 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         leaveDialog.show();
     }
 
-    private void createSearchThread(final String query) {
-        searchThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final Map<String, Conversation> searchResult = new LinkedHashMap<>();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
-                        showList(searchResult);
-                    }
-                });
-                for (Conversation conversation : CurrentApplication.getInstance().getConversations().values()) {
-                    for (Message message : conversation.getMessages()) {
-                        if (message.getText() != null && message.getText().toLowerCase().contains(query.toLowerCase())) {
-                            searchResult.put(conversation.getChannel().getName(), conversation);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    updateList();
-                                }
-                            });
-                        }
-                    }
+    private void searchMessage(final String query) {
+        final Map<String, Conversation> searchResult = new LinkedHashMap<>();
+        for (Conversation conversation : CurrentApplication.getInstance().getConversations().values()) {
+            for (Message message : conversation.getMessages()) {
+                if (message.getText() != null && message.getText().toLowerCase().contains(query.toLowerCase())) {
+                    searchResult.put(conversation.getChannel().getName(), conversation);
                 }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
-                    }
-                });
-                searchThread = null;
             }
-        });
-        searchThread.start();
+        }
+        showList(searchResult);
+
+    //    searchThread = new Thread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            final Map<String, Conversation> searchResult = new LinkedHashMap<>();
+    //            runOnUiThread(new Runnable() {
+    //                @Override
+    //                public void run() {
+    //                    findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
+    //                    showList(searchResult);
+    //                }
+    //            });
+    //            for (Conversation conversation : CurrentApplication.getInstance().getConversations().values()) {
+    //                for (Message message : conversation.getMessages()) {
+    //                    if (message.getText() != null && message.getText().toLowerCase().contains(query.toLowerCase())) {
+    //                        searchResult.put(conversation.getChannel().getName(), conversation);
+    //                        runOnUiThread(new Runnable() {
+    //                            @Override
+    //                            public void run() {
+    //                                updateList();
+    //                            }
+    //                        });
+    //                    }
+    //                }
+    //            }
+    //            runOnUiThread(new Runnable() {
+    //                @Override
+    //                public void run() {
+    //                    findViewById(R.id.homeProgress).setVisibility(View.GONE);
+    //                }
+    //            });
+    //            searchThread = null;
+    //        }
+    //    });
+    //    searchThread.start();
     }
 
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
         public void onSuccessFinish(Conversation lastConversation) {
-            if (adapter != null) {
-                adapter.notifyDataSetChanged();
-            } else {
-                showList(CurrentApplication.getInstance().getConversations());
-            }
+            showList(CurrentApplication.getInstance().getConversations());
         }
 
         @Override

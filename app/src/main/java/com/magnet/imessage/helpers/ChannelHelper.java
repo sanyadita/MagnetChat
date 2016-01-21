@@ -94,9 +94,7 @@ public class ChannelHelper {
     }
 
     public void readChannelInfo(MMXChannel channel, final OnReadChannelInfoListener listener) {
-        List<MMXChannel> channelList = new ArrayList<>(1);
-        channelList.add(channel);
-        readChannelsInfo(channelList, listener);
+        readChannelsInfo(Arrays.asList(channel), listener);
     }
 
     public void readChannelsInfo(List<MMXChannel> channels, final OnReadChannelInfoListener listener) {
