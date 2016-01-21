@@ -5,16 +5,15 @@ import com.magnet.imessage.preferences.UserPreference;
 import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiCallback;
 import com.magnet.max.android.ApiError;
-import com.magnet.max.android.Max;
 import com.magnet.max.android.User;
 import com.magnet.max.android.auth.model.UserRegistrationInfo;
 import com.magnet.mmx.client.api.MMX;
-import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.List;
 
 public class UserHelper {
 
+    private static final String EMAIL_TEMPLATE = "^[-a-z0-9!#$%&'*+/=?^_`{|}~]+(?:\\.[-a-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?\\.)*(?:aero|arpa|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|[a-z][a-z])$";
 
     private static UserHelper instance;
 
@@ -24,11 +23,13 @@ public class UserHelper {
 
     public interface OnLoginListener {
         void onSuccess();
+
         void onFailedLogin(ApiError apiError);
     }
 
     public interface OnLogoutListener {
         void onSuccess();
+
         void onFailedLogin(ApiError apiError);
     }
 
@@ -42,6 +43,7 @@ public class UserHelper {
         }
         return instance;
     }
+
     public void registerUser(String firstName, String lastName, final String email, final String password, final OnRegisterListener onRegisterListener) {
         UserRegistrationInfo.Builder infoBuilder = new UserRegistrationInfo.Builder();
         infoBuilder.firstName(firstName).lastName(lastName).email(email).userName(email).password(password);
@@ -64,22 +66,12 @@ public class UserHelper {
         User.login(email, password, remember, new ApiCallback<Boolean>() {
             @Override
             public void success(Boolean aBoolean) {
-                Max.initModule(MMX.getModule(), new ApiCallback<Boolean>() {
-                    @Override
-                    public void success(Boolean aBoolean) {
-                        if (remember) {
-                            UserPreference.getInstance().saveCredence(email, password);
-                        }
-                        MMX.start();
-                        Logger.debug("login", "success");
-                        onLoginListener.onSuccess();
-                    }
-
-                    @Override
-                    public void failure(ApiError apiError) {
-                        onLoginListener.onFailedLogin(apiError);
-                    }
-                });
+                if (remember) {
+                    UserPreference.getInstance().saveCredence(email, password);
+                }
+                MMX.start();
+                Logger.debug("login", "success");
+                onLoginListener.onSuccess();
             }
 
             @Override
@@ -103,21 +95,10 @@ public class UserHelper {
         User.logout(new ApiCallback<Boolean>() {
             @Override
             public void success(Boolean aBoolean) {
-                Max.deInitModule(MMX.getModule(), new ApiCallback<Boolean>() {
-                    @Override
-                    public void success(Boolean aBoolean) {
-                        UserPreference.getInstance().cleanCredence();
-                        CurrentApplication.getInstance().removeConversations();
-                        Logger.debug("logout", "success");
-                        listener.onSuccess();
-                    }
-
-                    @Override
-                    public void failure(ApiError apiError) {
-                        Logger.error("deinit module", apiError);
-                        listener.onFailedLogin(apiError);
-                    }
-                });
+                UserPreference.getInstance().cleanCredence();
+                CurrentApplication.getInstance().removeConversations();
+                Logger.debug("logout", "success");
+                listener.onSuccess();
             }
 
             @Override
@@ -132,18 +113,21 @@ public class UserHelper {
         return String.format("%s %s", user.getFirstName(), user.getLastName());
     }
 
-    public String userNamesAsString(List<UserInfo> userList) {
+    public String userNamesAsString(List<User> userList) {
         String users = "";
         for (int i = 0; i < userList.size(); i++) {
-            UserInfo user = userList.get(i);
-            if (user != null) {
-                users += user.getDisplayName();
+            if (userList.get(i) != null) {
+                users += userNameAsString(userList.get(i));
                 if (i != userList.size() - 1) {
                     users += ", ";
                 }
             }
         }
         return users;
+    }
+
+    public static boolean checkEmail(String email) {
+        return email.matches(EMAIL_TEMPLATE);
     }
 
 }

@@ -103,13 +103,9 @@ public class LoginActivity extends BaseActivity {
 
         @Override
         public void onFailedLogin(ApiError apiError) {
-            if (apiError.getKind() == 12) {
-                onSuccess();
-            } else {
-                Logger.error("login", apiError);
-                showLoginFailed();
-                changeLoginMode(false);
-            }
+            Logger.error("login", apiError);
+            showLoginFailed();
+            changeLoginMode(false);
         }
     };
 

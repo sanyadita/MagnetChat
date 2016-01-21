@@ -48,7 +48,8 @@
             android:layout_toLeftOf="@+id/chatSendBtn"
             android:layout_toRightOf="@+id/chatAddAttachment"
             android:layout_toStartOf="@+id/chatSendBtn"
-            android:hint="Write a comment..." />
+            android:hint="Write a comment..."
+            android:inputType="textCapSentences" />
     </RelativeLayout>
 
     <android.support.v7.widget.RecyclerView

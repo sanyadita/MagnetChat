@@ -17,9 +17,7 @@ import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.ApiCallback;
 import com.magnet.max.android.ApiError;
 import com.magnet.max.android.User;
-import com.magnet.mmx.client.internal.channel.UserInfo;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ChooseUserActivity extends BaseActivity implements SearchView.OnQueryTextListener, SearchView.OnCloseListener, AdapterView.OnItemClickListener {
@@ -133,16 +131,8 @@ public class ChooseUserActivity extends BaseActivity implements SearchView.OnQue
             public void success(List<User> users) {
                 users.remove(User.getCurrentUser());
                 if (conversation != null) {
-                    List<Integer> idxToRemove = new ArrayList<Integer>();
-                    for (UserInfo userInfo : conversation.getSuppliers().values()) {
-                        for (int i = 0; i < users.size(); i++) {
-                            if (userInfo.getUserId().equals(users.get(i).getUserIdentifier())) {
-                                idxToRemove.add(i);
-                            }
-                        }
-                    }
-                    for (Integer idx : idxToRemove) {
-                        users.remove(idx.intValue());
+                    for (User user : conversation.getSuppliers().values()) {
+                        users.remove(user);
                     }
                 }
                 findViewById(R.id.chooseUserProgress).setVisibility(View.GONE);

@@ -24,10 +24,9 @@ public class DateHelper {
         }
         DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
         if (dateFormat.format(date).equals(dateFormat.format(new Date()))) {
-            return getTime(date.getTime());
+            return getTime(date);
         } else {
-            long week = 1000 * 60 * 60 * 24 * 7;
-            if ((System.currentTimeMillis() - date.getTime()) < week) {
+            if ((System.currentTimeMillis() - date.getTime()) < WEEK_MILLS) {
                 return new SimpleDateFormat(WEEK_FORMAT, Locale.ENGLISH).format(date);
             }
         }
@@ -44,8 +43,8 @@ public class DateHelper {
         return 0;
     }
 
-    public static String getTime(long date) {
-        return DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(date));
+    public static String getTime(Date date) {
+        return DateFormat.getTimeInstance(DateFormat.SHORT).format(date);
     }
 
     public static String getDateWithoutSpaces() {
@@ -53,7 +52,11 @@ public class DateHelper {
         return dateFormat.format(new Date());
     }
 
-    public static String getMessageDay(long date) {
+    public static Date getWeekAgo() {
+        return new Date(System.currentTimeMillis() - WEEK_MILLS);
+    }
+
+    public static String getMessageDay(Date date) {
         SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
         SimpleDateFormat dayOfWeekFormat = new SimpleDateFormat(WEEK_FORMAT);
         GregorianCalendar calendar = new GregorianCalendar();
@@ -66,7 +69,7 @@ public class DateHelper {
         calendar.setTimeInMillis(System.currentTimeMillis() - WEEK_MILLS);
         SimpleDate weekAgo = SimpleDate.create(calendar);
 
-        calendar.setTimeInMillis(date);
+        calendar.setTime(date);
         SimpleDate simpleDate = SimpleDate.create(calendar);
         if (simpleDate.compareTo(now) == 0) {
             return "Today";

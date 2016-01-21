@@ -13,15 +13,13 @@ import com.magnet.mmx.client.api.ChannelMatchType;
 import com.magnet.mmx.client.api.ListResult;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
-import com.magnet.mmx.client.internal.channel.ChannelSummaryResponse;
-import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class ChannelHelper {
@@ -82,7 +80,21 @@ public class ChannelHelper {
             @Override
             public void onSuccess(List<MMXChannel> channels) {
                 Logger.debug("read conversations", "success");
-                readChannelsInfo(channels, listener);
+                for (MMXChannel channel : channels) {
+                    readChannelInfo(channel, new OnReadChannelInfoListener() {
+                        @Override
+                        public void onSuccessFinish(Conversation conversation) {
+                            CurrentApplication.getInstance().addConversation(conversation.getChannel().getName(), conversation);
+                            CurrentApplication.getInstance().sendBroadcast(new Intent(ACTION_ADDED_CONVERSATION));
+                            listener.onSuccessFinish(conversation);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable throwable) {
+                            listener.onFailure(throwable);
+                        }
+                    });
+                }
             }
 
             @Override
@@ -93,40 +105,70 @@ public class ChannelHelper {
         });
     }
 
-    public void readChannelInfo(MMXChannel channel, final OnReadChannelInfoListener listener) {
-        readChannelsInfo(Arrays.asList(channel), listener);
-    }
-
-    public void readChannelsInfo(List<MMXChannel> channels, final OnReadChannelInfoListener listener) {
-        final Map<String, MMXChannel> channelMap = new HashMap<>(channels.size());
-        for (MMXChannel channel : channels) {
-            channelMap.put(channel.getName(), channel);
+    public void readChannelInfo(final MMXChannel channel, final OnReadChannelInfoListener listener) {
+        if (channel == null) {
+            return;
         }
-        MMXChannel.getChannelSummary(new HashSet<>(channels), 1000, 100, new MMXChannel.OnFinishedListener<List<ChannelSummaryResponse>>() {
+        final Conversation conversation = new Conversation();
+        conversation.setChannel(channel);
+        channel.getAllSubscribers(100, 0, new MMXChannel.OnFinishedListener<ListResult<User>>() {
             @Override
-            public void onSuccess(List<ChannelSummaryResponse> channelSummaryResponses) {
-                Conversation lastConversation = null;
-                for (ChannelSummaryResponse channelResponse : channelSummaryResponses) {
-                    Conversation conversation = new Conversation();
-                    conversation.setChannel(channelMap.get(channelResponse.getChannelName()));
-                    List<UserInfo> infoList = new ArrayList<>(channelResponse.getPublishedItemCount());
-                    for (UserInfo info : channelResponse.getSubscribers()) {
-                        if (!info.getUserId().equals(User.getCurrentUserId())) {
-                            infoList.add(info);
-                        }
+            public void onSuccess(ListResult<User> userListResult) {
+                conversation.setSuppliers(new HashMap<String, User>());
+                Logger.debug("channel subscribers", "success. channel " + channel.getName());
+                for (User user : userListResult.items) {
+                    if (!user.getUserIdentifier().equals(User.getCurrentUserId())) {
+                        conversation.addSupplier(user);
                     }
-                    conversation.setSuppliers(infoList);
-                    conversation.setMessages(channelResponse.getMessages());
-                    CurrentApplication.getInstance().addConversation(channelResponse.getChannelName(), conversation);
-                    CurrentApplication.getInstance().sendBroadcast(new Intent(ACTION_ADDED_CONVERSATION));
-                    lastConversation = conversation;
                 }
-                listener.onSuccessFinish(lastConversation);
+                Date now = new Date();
+                Date weekAgo = DateHelper.getWeekAgo();
+                channel.getMessages(weekAgo, now, 1000, 0, true, new MMXChannel.OnFinishedListener<ListResult<MMXMessage>>() {
+                    @Override
+                    public void onSuccess(ListResult<MMXMessage> mmxMessageListResult) {
+                        Logger.debug("channel messages", "success. channel " + channel.getName());
+                        for (MMXMessage mmxMessage : mmxMessageListResult.items) {
+                            conversation.addMessage(Message.createMessageFrom(mmxMessage));
+                        }
+                        listener.onSuccessFinish(conversation);
+                    }
+
+                    @Override
+                    public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                        Logger.error("channel messages", throwable);
+                        listener.onFailure(throwable);
+                    }
+                });
             }
 
             @Override
             public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
-                Logger.error("read conversations", throwable);
+                Logger.error("channel subscribers", throwable);
+                listener.onFailure(throwable);
+            }
+        });
+    }
+
+    public void updateConversationUserList(final Conversation conversation, final OnReadChannelInfoListener listener) {
+        final MMXChannel channel = conversation.getChannel();
+        if (channel == null) {
+            return;
+        }
+        channel.getAllSubscribers(100, 0, new MMXChannel.OnFinishedListener<ListResult<User>>() {
+            @Override
+            public void onSuccess(ListResult<User> userListResult) {
+                conversation.setSuppliers(new HashMap<String, User>());
+                Logger.debug("channel subscribers", "success. channel " + channel.getName());
+                for (User user : userListResult.items) {
+                    if (!user.getUserIdentifier().equals(User.getCurrentUserId())) {
+                        conversation.addSupplier(user);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                Logger.error("channel messages", throwable);
                 listener.onFailure(throwable);
             }
         });
@@ -135,8 +177,8 @@ public class ChannelHelper {
     public void addUserToConversation(final Conversation conversation, final User user, final OnAddUserListener listener) {
         if (conversation.getSuppliers().get(user.getUserIdentifier()) == null) {
             List<String> userInConversation = new ArrayList<>();
-            for (UserInfo userInfo : conversation.getSuppliers().values()) {
-                userInConversation.add(userInfo.getUserId());
+            for (User supplier : conversation.getSuppliers().values()) {
+                userInConversation.add(supplier.getUserIdentifier());
             }
             userInConversation.add(User.getCurrentUserId());
             userInConversation.add(user.getUserIdentifier());
@@ -245,19 +287,15 @@ public class ChannelHelper {
             Conversation conversation = CurrentApplication.getInstance().getConversationByName(mmxMessage.getChannel().getName());
             if (conversation != null) {
                 conversation.addMessage(message);
-                UserInfo sender = message.getSender();
-                if (sender != null && sender.getUserId() != null) {
-                    if (!sender.getUserId().equals(User.getCurrentUserId())) {
-                        if (conversation.getSuppliers().get(sender.getUserId()) == null) {
-                            conversation.addSupplier(sender);
-                        }
-                        conversation.setHasUnreadMessage(true);
+                User sender = message.getMmxMessage().getSender();
+                if (sender != null && !sender.equals(User.getCurrentUser())) {
+                    if (conversation.getSuppliers().get(sender.getUserIdentifier()) == null) {
+                        conversation.addSupplier(sender);
                     }
+                    conversation.setHasUnreadMessage(true);
                 }
             } else {
-                List<MMXChannel> mmxChannelList = new ArrayList<>();
-                mmxChannelList.add(mmxMessage.getChannel());
-                readChannelsInfo(mmxChannelList, new ChannelHelper.OnReadChannelInfoListener() {
+                readChannelInfo(mmxMessage.getChannel(), new ChannelHelper.OnReadChannelInfoListener() {
                     @Override
                     public void onSuccessFinish(Conversation conversation) {
                     }

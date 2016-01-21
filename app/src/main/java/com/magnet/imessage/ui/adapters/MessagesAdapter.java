@@ -2,9 +2,8 @@ package com.magnet.imessage.ui.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
+import android.content.res.Resources;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
@@ -15,17 +14,16 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.magnet.imessage.R;
 import com.magnet.imessage.helpers.DateHelper;
+import com.magnet.imessage.helpers.UserHelper;
 import com.magnet.imessage.model.Message;
+import com.magnet.max.android.Attachment;
 import com.magnet.max.android.User;
-import com.squareup.picasso.NetworkPolicy;
-import com.squareup.picasso.Picasso;
-import com.squareup.picasso.Target;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -68,7 +66,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
                         context.startActivity(intent);
                         break;
                     case Message.TYPE_VIDEO:
-                        String newVideoPath = message.getUrl();
+                        String newVideoPath = message.getAttachment().getDownloadUrl();
                         if (newVideoPath != null) {
                             intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newVideoPath));
                             intent.setDataAndType(Uri.parse(newVideoPath), "video/*");
@@ -76,11 +74,13 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
                         }
                         break;
                     case Message.TYPE_PHOTO:
-                        String newImagePath = message.getUrl();
-                        if (newImagePath != null) {
-                            intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newImagePath));
-                            intent.setDataAndType(Uri.parse(newImagePath), "image/*");
-                            context.startActivity(intent);
+                        if (message.getAttachment() != null) {
+                            String newImagePath = message.getAttachment().getDownloadUrl();
+                            if (newImagePath != null) {
+                                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newImagePath));
+                                intent.setDataAndType(Uri.parse(newImagePath), "image/*");
+                                context.startActivity(intent);
+                            }
                         }
                         break;
                 }
@@ -96,10 +96,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         firstMsgIdxs = new ArrayList<>();
         dates = new ArrayList<>();
         for (int i = 0; i < messages.size(); i++) {
-            String msgDay = DateHelper.getMessageDay(messages.get(i).getCreateTime());
-            if (!dates.contains(msgDay)) {
-                firstMsgIdxs.add(i);
-                dates.add(msgDay);
+            if (messages.get(i).getCreateTime() != null) {
+                String msgDay = DateHelper.getMessageDay(messages.get(i).getCreateTime());
+                if (!dates.contains(msgDay)) {
+                    firstMsgIdxs.add(i);
+                    dates.add(msgDay);
+                }
             }
         }
     }
@@ -118,7 +120,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         Message message = getItem(position);
         holder.message = message;
         configureDate(holder, message, position);
-        if (message.getSender() == null || User.getCurrentUserId().equals(message.getSender().getUserId())) {
+        if (message.getSender() == null || User.getCurrentUser().equals(message.getSender())) {
             makeMessageFromMe(holder, message);
         } else {
             makeMessageToMe(holder, message);
@@ -153,14 +155,18 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     }
 
     private void configureDate(ViewHolder viewHolder, Message message, int position) {
-        String msgDay = DateHelper.getMessageDay(message.getCreateTime());
+        Date date = message.getCreateTime();
+        if (date == null) {
+            date = new Date();
+        }
+        String msgDay = DateHelper.getMessageDay(date);
         if (!dates.contains(msgDay)) {
             firstMsgIdxs.add(position);
             dates.add(msgDay);
         }
         if (firstMsgIdxs.contains(position)) {
             viewHolder.date.setVisibility(View.VISIBLE);
-            viewHolder.date.setText(String.format("%s %s", msgDay, DateHelper.getTime(message.getCreateTime())));
+            viewHolder.date.setText(String.format("%s %s", msgDay, DateHelper.getTime(date)));
         } else {
             viewHolder.date.setVisibility(View.GONE);
         }
@@ -172,7 +178,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         viewHolder.text.setTextColor(Color.BLACK);
         viewHolder.delivered.setVisibility(View.GONE);
         if (message.getSender() != null) {
-            viewHolder.sender.setText(message.getSender().getDisplayName());
+            viewHolder.sender.setText(UserHelper.getInstance().userNameAsString(message.getSender()));
         }
         viewHolder.sender.setVisibility(View.VISIBLE);
     }
@@ -197,7 +203,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private void configureMapMsg(ViewHolder holder, Message message) {
         configureMediaMsg(holder);
         String loc = "http://maps.google.com/maps/api/staticmap?center=" + message.getLatitudeLongitude() + "&zoom=18&size=700x300&sensor=false&markers=color:blue%7Clabel:S%7C" + message.getLatitudeLongitude();
-        Picasso.with(context).load(loc).into(holder.image);
+        Glide.with(context).load(loc).into(holder.image);
     }
 
     private void configureVideoMsg(ViewHolder holder, Message message) {
@@ -205,39 +211,17 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
         holder.image.setImageResource(R.drawable.video_message);
     }
 
-    private void configureImageMsg(ViewHolder holder, Message message) {
+    private void configureImageMsg(final ViewHolder holder, Message message) {
         configureMediaMsg(holder);
-        if (message.getUrl() != null) {
-            Target target = new Target() {
-                @Override
-                public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            File file = new File(context.getCacheDir(), "saved.jpg");
-                            try {
-                                file.createNewFile();
-                                FileOutputStream ostream = new FileOutputStream(file);
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, ostream);
-                                ostream.close();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }).start();
-                }
-
-                @Override
-                public void onBitmapFailed(Drawable errorDrawable) {
-                }
-
-                @Override
-                public void onPrepareLoad(Drawable placeHolderDrawable) {
-                }
-            };
-            Picasso.with(context).load(message.getUrl()).networkPolicy(NetworkPolicy.OFFLINE).placeholder(R.drawable.photo_msg).into(target);
+        final Attachment attachment = message.getAttachment();
+        if (attachment != null) {
+            Glide.with(context).load(Uri.parse(attachment.getDownloadUrl())).centerCrop().placeholder(R.drawable.photo_msg).into(holder.image);
         }
+    }
+
+    private int dpToPx(int dp) {
+        float density = Resources.getSystem().getDisplayMetrics().density;
+        return Math.round((float) dp * density);
     }
 
     private void configureTextMsg(ViewHolder holder, Message message) {

@@ -20,7 +20,8 @@ public class WakeupReceiver extends BroadcastReceiver {
             showNotification(context, "New message is available", null);
         } else if (PubSubNotification.getType().equals(event.getType())) {
             PubSubNotification pubsub = event.getCustomObject(PubSubNotification.class);
-            showNotification(context, pubsub.getText(), pubsub.getChannel().toString());
+
+            showNotification(context, pubsub.getBody(), pubsub.getTitle());
         }
     }
 

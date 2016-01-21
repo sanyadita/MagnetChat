@@ -9,6 +9,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
@@ -33,7 +34,6 @@ import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
-import com.magnet.mmx.client.internal.channel.UserInfo;
 
 import java.util.List;
 
@@ -79,7 +79,9 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
         } else {
             channelName = getIntent().getStringExtra(TAG_CHANNEL_NAME);
             if (channelName != null) {
-                prepareConversation(CurrentApplication.getInstance().getConversationByName(channelName));
+                currentConversation = CurrentApplication.getInstance().getConversationByName(channelName);
+//                prepareConversation(currentConversation);
+                ChannelHelper.getInstance().updateConversationUserList(currentConversation, readChannelInfoListener);
             }
         }
 
@@ -164,17 +166,17 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
                 Uri[] uris = new Uri[parcelableUris.length];
                 System.arraycopy(parcelableUris, 0, uris, 0, parcelableUris.length);
 
-                if (uris != null && uris.length > 0) {
+                if (uris.length > 0) {
                     for (Uri uri : uris) {
                         findViewById(R.id.chatMessageProgress).setVisibility(View.VISIBLE);
-                        currentConversation.sendMedia(uri.toString(), Message.TYPE_PHOTO, sendMessageListener);
+                        currentConversation.sendPhoto(uri.toString(), sendMessageListener);
                     }
                 }
             } else if (requestCode == INTENT_SELECT_VIDEO) {
                 findViewById(R.id.chatMessageProgress).setVisibility(View.VISIBLE);
                 Uri videoUri = intent.getData();
                 String videoPath = FileHelper.getPath(this, videoUri);
-                currentConversation.sendMedia(videoPath, Message.TYPE_VIDEO, sendMessageListener);
+                currentConversation.sendVideo(videoPath, sendMessageListener);
             }
         }
     }
@@ -188,7 +190,7 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
     }
 
     private void showAttachmentDialog() {
@@ -266,11 +268,16 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
     }
 
     private void prepareConversation(Conversation conversation) {
-        if (conversation.getChannel().getName() ==null || CurrentApplication.getInstance().getConversations().get(conversation.getChannel().getName()) == null) {
+        String channelName = conversation.getChannel().getName();
+        if (channelName == null) {
             finish();
+            return;
+        }
+        if (CurrentApplication.getInstance().getConversations().get(channelName) == null) {
+            CurrentApplication.getInstance().addConversation(channelName, conversation);
         }
         currentConversation = conversation;
-        List<UserInfo> suppliersList = conversation.getSuppliersList();
+        List<User> suppliersList = conversation.getSuppliersList();
         if (conversation.getSuppliers().size() == 1) {
             setTitle(UserHelper.getInstance().userNamesAsString(suppliersList));
         } else {

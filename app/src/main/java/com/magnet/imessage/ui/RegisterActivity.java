@@ -27,15 +27,19 @@ public class RegisterActivity extends BaseActivity {
                 String email = getFieldText(R.id.registerEmail);
                 String password = getFieldText(R.id.registerPassword);
                 String passwordRepeat = getFieldText(R.id.registerRepeatPassword);
-                if (checkStrings(firstName, lastName, email, password, passwordRepeat)) {
-                    if (password.equals(passwordRepeat)) {
-                        changeLoginMode(true);
-                        UserHelper.getInstance().registerUser(firstName, lastName, email, password, onRegisterListener);
-                    } else {
-                        showInfoDialog("Passwords do not match", "Please enter your password and verify your password again");
-                    }
+                if (!checkStrings(firstName, lastName, email, password, passwordRepeat)) {
+                    showInfoDialog(null, "Input all fileds");
+                    return;
+                }
+                if (!UserHelper.checkEmail(email)) {
+                    showInfoDialog("Invalid email", "Please enter the valid email");
+                    return;
+                }
+                if (password.equals(passwordRepeat)) {
+                    changeLoginMode(true);
+                    UserHelper.getInstance().registerUser(firstName, lastName, email, password, onRegisterListener);
                 } else {
-                    showInfoDialog("Registration", "Enter all fields");
+                    showInfoDialog("Passwords do not match", "Please enter your password and verify your password again");
                 }
                 break;
             case R.id.registerReturnBtn:

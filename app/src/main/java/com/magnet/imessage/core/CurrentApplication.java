@@ -20,8 +20,6 @@ import com.magnet.max.android.config.MaxAndroidPropertiesConfig;
 import com.magnet.mmx.client.api.MMX;
 import com.magnet.mmx.client.api.MMXChannel;
 import com.magnet.mmx.client.api.MMXMessage;
-import com.squareup.picasso.OkHttpDownloader;
-import com.squareup.picasso.Picasso;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,12 +40,6 @@ public class CurrentApplication extends MultiDexApplication {
         InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
         MMX.registerWakeupBroadcast(this, new Intent("MMX_WAKEUP_ACTION"));
-
-        Picasso.Builder builder = new Picasso.Builder(this);
-        builder.downloader(new OkHttpDownloader(this, Integer.MAX_VALUE));
-        Picasso built = builder.build();
-        built.setLoggingEnabled(true);
-        Picasso.setSingletonInstance(built);
     }
 
     //Enable MultiDex

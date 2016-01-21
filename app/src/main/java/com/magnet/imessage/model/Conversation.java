@@ -7,8 +7,7 @@ import com.magnet.imessage.util.Logger;
 import com.magnet.max.android.Attachment;
 import com.magnet.max.android.User;
 import com.magnet.mmx.client.api.MMXChannel;
-import com.magnet.mmx.client.internal.channel.PubSubItemChannel;
-import com.magnet.mmx.client.internal.channel.UserInfo;
+import com.magnet.mmx.client.api.MMXMessage;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,45 +17,37 @@ import java.util.Map;
 
 public class Conversation {
 
-    private Map<String, UserInfo> suppliers;
+    private Map<String, User> suppliers;
     private List<Message> messages;
     private boolean hasUnreadMessage;
     private MMXChannel channel;
 
     public interface OnSendMessageListener {
         void onSuccessSend(Message message);
+
         void onFailure(Throwable throwable);
     }
 
     public Conversation() {
     }
 
-    public Map<String, UserInfo> getSuppliers() {
+    public Map<String, User> getSuppliers() {
         if (suppliers == null) {
             suppliers = new HashMap<>();
         }
         return suppliers;
     }
 
-    public List<UserInfo> getSuppliersList() {
+    public List<User> getSuppliersList() {
         return new ArrayList<>(getSuppliers().values());
     }
 
-    public void addSupplier(UserInfo userInfo) {
-        getSuppliers().put(userInfo.getUserId(), userInfo);
-    }
-    public void addSupplier(User user) {
-        UserInfo.UserInfoBuilder infoBuilder = new UserInfo.UserInfoBuilder();
-        infoBuilder.userId(user.getUserIdentifier());
-        infoBuilder.displayName(user.getFirstName() + " " + user.getLastName());
-        getSuppliers().put(user.getUserIdentifier(), infoBuilder.build());
+    public void setSuppliers(Map<String, User> suppliers) {
+        this.suppliers = suppliers;
     }
 
-    public void setSuppliers(List<UserInfo> suppliersList) {
-        this.suppliers = new HashMap<>();
-        for (UserInfo userInfo : suppliersList) {
-            suppliers.put(userInfo.getUserId(), userInfo);
-        }
+    public void addSupplier(User user) {
+        getSuppliers().put(user.getUserIdentifier(), user);
     }
 
     public boolean hasUnreadMessage() {
@@ -80,26 +71,6 @@ public class Conversation {
             messages = new ArrayList<>();
         }
         return messages;
-    }
-
-    public void setMessages(List<PubSubItemChannel> pubSubItems) {
-        if (pubSubItems != null) {
-            messages = new ArrayList<>(pubSubItems.size());
-            for (PubSubItemChannel item : pubSubItems) {
-                UserInfo sender = suppliers.get(item.getPublisher().getUserId());
-                if (sender == null) {
-                    sender = item.getPublisherInfo();
-                    if (sender.getUserId() != null) {
-                        suppliers.put(sender.getUserId(), sender);
-                    } else {
-                        sender = null;
-                    }
-                }
-                messages.add(Message.createMessageFrom(item, sender));
-            }
-        } else {
-            messages = new ArrayList<>();
-        }
     }
 
     public void addMessage(Message message) {
@@ -126,47 +97,43 @@ public class Conversation {
         }
     }
 
-    public void sendMedia(final String filePath, final String type, final OnSendMessageListener listener) {
+    public void sendVideo(final String filePath, final OnSendMessageListener listener) {
         if (channel != null) {
             File file = new File(filePath);
-            String fileType = Message.FILE_TYPE_PHOTO;
-            if (type.equals(Message.TYPE_VIDEO)) {
-                fileType = Message.FILE_TYPE_VIDEO;
-            }
-            Attachment attachment = new Attachment(file, fileType, file.getName(), "From " + UserHelper.getInstance().userNameAsString(User.getCurrentUser()));
-            attachment.upload(new Attachment.UploadListener() {
-                @Override
-                public void onStart(Attachment attachment) {
-                    Logger.debug("start upload", filePath);
-                }
+            Attachment attachment = new Attachment(file, Message.FILE_TYPE_VIDEO, file.getName(), "From " + UserHelper.getInstance().userNameAsString(User.getCurrentUser()));
+            Map<String, String> content = Message.makeVideoContent();
+            sendMessage(content, attachment, listener);
+        } else {
+            throw new Error();
+        }
+    }
 
-                @Override
-                public void onComplete(Attachment attachment) {
-                    Logger.debug("complete upload", filePath);
-                    Map<String, String> content = Message.makeMediaContent(attachment.getDownloadUrl(), type);
-                    sendMessage(content, listener);
-                }
-
-                @Override
-                public void onError(Attachment attachment, Throwable throwable) {
-                    Logger.error("error upload", throwable);
-                    listener.onFailure(throwable);
-                }
-            });
+    public void sendPhoto(final String filePath, final OnSendMessageListener listener) {
+        if (channel != null) {
+            File file = new File(filePath);
+            Attachment attachment = new Attachment(file, Message.FILE_TYPE_PHOTO, file.getName(), "From " + UserHelper.getInstance().userNameAsString(User.getCurrentUser()));
+            Map<String, String> content = Message.makePhotoContent();
+            sendMessage(content, attachment, listener);
         } else {
             throw new Error();
         }
     }
 
     private void sendMessage(Map<String, String> content, final OnSendMessageListener listener) {
-        final Message message = new Message();
-        message.setContent(content);
-        message.setCreateTime(System.currentTimeMillis());
-        channel.publish(content, new MMXChannel.OnFinishedListener<String>() {
+        sendMessage(content, null, listener);
+    }
+
+    private void sendMessage(Map<String, String> content, Attachment attachment, final OnSendMessageListener listener) {
+        MMXMessage.Builder builder = new MMXMessage.Builder();
+        builder.channel(channel).content(content);
+        if (attachment != null) {
+            builder.attachments(attachment);
+        }
+        final Message message = Message.createMessageFrom(builder.build());
+        channel.publish(message.getMmxMessage(), new MMXChannel.OnFinishedListener<String>() {
             @Override
             public void onSuccess(String s) {
                 Logger.debug("send message", "success");
-                message.setMessageId(s);
                 addMessage(message);
                 listener.onSuccessSend(message);
             }

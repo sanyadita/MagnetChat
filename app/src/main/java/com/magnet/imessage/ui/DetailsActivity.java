@@ -8,7 +8,7 @@ import android.widget.ListView;
 import com.magnet.imessage.R;
 import com.magnet.imessage.core.CurrentApplication;
 import com.magnet.imessage.model.Conversation;
-import com.magnet.imessage.ui.adapters.UserInfoAdapter;
+import com.magnet.imessage.ui.adapters.UsersAdapter;
 import com.magnet.max.android.User;
 
 public class DetailsActivity extends BaseActivity {
@@ -28,7 +28,7 @@ public class DetailsActivity extends BaseActivity {
             if (currentConversation.getChannel().getOwnerId().equals(User.getCurrentUserId())) {
                 canAddUser = true;
             }
-            UserInfoAdapter adapter = new UserInfoAdapter(this, currentConversation.getSuppliersList(), canAddUser, addUserListener);
+            UsersAdapter adapter = new UsersAdapter(this, currentConversation.getSuppliersList(), addUserListener);
             ListView listView = (ListView) findViewById(R.id.detailsSubscribersList);
             listView.setAdapter(adapter);
         }
@@ -39,7 +39,7 @@ public class DetailsActivity extends BaseActivity {
 
     }
 
-    private UserInfoAdapter.AddUserListener addUserListener = new UserInfoAdapter.AddUserListener() {
+    private UsersAdapter.AddUserListener addUserListener = new UsersAdapter.AddUserListener() {
         @Override
         public void addUser() {
             startActivity(ChooseUserActivity.getIntentToAddUserToChannel(channelName));

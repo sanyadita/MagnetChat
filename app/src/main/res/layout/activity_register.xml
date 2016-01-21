@@ -19,14 +19,14 @@
             android:id="@+id/registerFirstName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapSentences"
+            android:inputType="textCapWords"
             android:hint="First name" />
 
         <EditText
             android:id="@+id/registerLastName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapSentences"
+            android:inputType="textCapWords"
             android:hint="Last name" />
 
         <TextView

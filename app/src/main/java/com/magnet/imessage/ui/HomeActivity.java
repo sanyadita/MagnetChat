@@ -109,6 +109,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
                 return false;
             }
         });
+        findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
         ChannelHelper.getInstance().readConversations(readChannelInfoListener);
     }
 
@@ -234,7 +235,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
                     @Override
                     public void onSuccess() {
                         findViewById(R.id.homeProgress).setVisibility(View.GONE);
-                        updateList();
+                        showAllConversations();
                     }
 
                     @Override
@@ -299,11 +300,13 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private ChannelHelper.OnReadChannelInfoListener readChannelInfoListener = new ChannelHelper.OnReadChannelInfoListener() {
         @Override
         public void onSuccessFinish(Conversation lastConversation) {
+            findViewById(R.id.homeProgress).setVisibility(View.GONE);
             showList(CurrentApplication.getInstance().getConversations());
         }
 
         @Override
         public void onFailure(Throwable throwable) {
+            findViewById(R.id.homeProgress).setVisibility(View.GONE);
         }
     };
 
