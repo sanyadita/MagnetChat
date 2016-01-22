@@ -4,12 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#fff"
-    android:focusable="true"
-    android:focusableInTouchMode="true"
+    style="@style/LayoutStyle"
     android:orientation="vertical"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.magnet.imessage.ui.HomeActivity"
+    tools:context="com.magnet.magnetchat.ui.HomeActivity"
     tools:showIn="@layout/app_bar_home">
 
     <SearchView

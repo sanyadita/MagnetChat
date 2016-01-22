@@ -1,4 +1,4 @@
-package com.magnet.imessage;
+package com.magnet.magnetchat;
 
 import org.junit.Test;
 

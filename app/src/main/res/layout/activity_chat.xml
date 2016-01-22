@@ -23,14 +23,18 @@
         android:background="#f6f6f6"
         android:padding="5dp">
 
-        <Button
+        <TextView
             android:id="@+id/chatSendBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
-            android:text="Send" />
+            android:padding="10dp"
+            android:text="Send"
+            android:textColor="#838383"
+            android:textSize="19sp"
+            android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/chatAddAttachment"
@@ -41,6 +45,7 @@
 
         <EditText
             android:id="@+id/chatMessageField"
+            style="@style/EditFieldStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
