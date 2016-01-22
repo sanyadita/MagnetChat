@@ -35,7 +35,7 @@ public class CurrentApplication extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         instance = this;
-        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax_kostya));
+        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax));
         UserPreference.getInstance(this);
         InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
