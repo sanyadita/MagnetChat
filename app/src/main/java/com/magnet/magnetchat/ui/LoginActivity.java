@@ -12,6 +12,7 @@ import com.magnet.magnetchat.preferences.UserPreference;
 import com.magnet.magnetchat.util.Logger;
 import com.magnet.max.android.ApiError;
 import com.magnet.max.android.User;
+import com.magnet.mmx.client.api.MMX;
 
 public class LoginActivity extends BaseActivity {
 
@@ -24,7 +25,6 @@ public class LoginActivity extends BaseActivity {
         setOnClickListeners(R.id.loginCreateAccountBtn, R.id.loginForgotPaswordBtn, R.id.loginSignInBtn);
         remember = (CheckBox) findViewById(R.id.loginRemember);
         String[] credence = UserPreference.getInstance().readCredence();
-        User user = User.getCurrentUser();
         if (User.getCurrentUser() != null) {
             startActivity(new Intent(LoginActivity.this, HomeActivity.class));
             finish();
@@ -58,20 +58,24 @@ public class LoginActivity extends BaseActivity {
 //                startActivity(new Intent(this, RegisterActivity.class));
                 break;
             case R.id.loginSignInBtn:
-                if (InternetConnection.getInstance().isAnyConnectionAvailable()) {
-                    final String email = getFieldText(R.id.loginEmail);
-                    final String password = getFieldText(R.id.loginPassword);
-                    boolean shouldRemember = remember.isChecked();
-                    if (checkStrings(email, password)) {
-                        changeLoginMode(true);
-                        UserHelper.getInstance().login(email, password, shouldRemember, loginListener);
-                    } else {
-                        showLoginFailed();
-                    }
-                } else {
-                    showNoConnection();
-                }
+                runLoginFromFields();
                 break;
+        }
+    }
+
+    private void runLoginFromFields() {
+        if (InternetConnection.getInstance().isAnyConnectionAvailable()) {
+            final String email = getFieldText(R.id.loginEmail);
+            final String password = getFieldText(R.id.loginPassword);
+            boolean shouldRemember = remember.isChecked();
+            if (checkStrings(email, password)) {
+                changeLoginMode(true);
+                UserHelper.getInstance().login(email, password, shouldRemember, loginListener);
+            } else {
+                showLoginFailed();
+            }
+        } else {
+            showNoConnection();
         }
     }
 
@@ -103,10 +107,10 @@ public class LoginActivity extends BaseActivity {
 
         @Override
         public void onFailedLogin(ApiError apiError) {
-            Logger.error("login", apiError);
-            if (apiError.getMessage().contains("cococ")) {
-                onSuccess();
+            if (apiError.getMessage().contains(MMX.FailureCode.DEVICE_CONCURRENT_LOGIN.getDescription())) {
+                runLoginFromFields();
             } else {
+                Logger.error("login", apiError);
                 showLoginFailed();
                 changeLoginMode(false);
             }

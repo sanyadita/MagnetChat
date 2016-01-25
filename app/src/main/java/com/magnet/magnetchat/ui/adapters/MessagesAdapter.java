@@ -2,7 +2,6 @@ package com.magnet.magnetchat.ui.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
@@ -69,7 +68,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
                         String newVideoPath = message.getAttachment().getDownloadUrl();
                         if (newVideoPath != null) {
                             intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newVideoPath));
-                            intent.setDataAndType(Uri.parse(newVideoPath), "video/*");
+                            intent.setDataAndType(Uri.parse(newVideoPath), message.getAttachment().getMimeType());
                             context.startActivity(intent);
                         }
                         break;
@@ -203,25 +202,21 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
     private void configureMapMsg(ViewHolder holder, Message message) {
         configureMediaMsg(holder);
         String loc = "http://maps.google.com/maps/api/staticmap?center=" + message.getLatitudeLongitude() + "&zoom=18&size=700x300&sensor=false&markers=color:blue%7Clabel:S%7C" + message.getLatitudeLongitude();
-        Glide.with(context).load(loc).into(holder.image);
+        Glide.with(context).load(loc).placeholder(R.drawable.map_msg).centerCrop().into(holder.image);
     }
 
     private void configureVideoMsg(ViewHolder holder, Message message) {
         configureMediaMsg(holder);
-        holder.image.setImageResource(R.drawable.video_message);
+        holder.image.setImageResource(R.drawable.video_msg);
+        holder.image.setContentDescription("Click to watch the video");
     }
 
     private void configureImageMsg(final ViewHolder holder, Message message) {
         configureMediaMsg(holder);
         final Attachment attachment = message.getAttachment();
         if (attachment != null) {
-            Glide.with(context).load(Uri.parse(attachment.getDownloadUrl())).centerCrop().placeholder(R.mipmap.photo_msg).into(holder.image);
+            Glide.with(context).load(Uri.parse(attachment.getDownloadUrl())).centerCrop().placeholder(R.drawable.photo_msg).into(holder.image);
         }
-    }
-
-    private int dpToPx(int dp) {
-        float density = Resources.getSystem().getDisplayMetrics().density;
-        return Math.round((float) dp * density);
     }
 
     private void configureTextMsg(ViewHolder holder, Message message) {

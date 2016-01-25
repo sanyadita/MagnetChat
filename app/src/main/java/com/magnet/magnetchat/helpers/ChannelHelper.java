@@ -340,4 +340,24 @@ public class ChannelHelper {
         }
     }
 
+    public void deleteChannel(final Conversation conversation, final OnLeaveChannelListener listener) {
+        final MMXChannel channel = conversation.getChannel();
+        if (channel != null) {
+            channel.delete(new MMXChannel.OnFinishedListener<Void>() {
+                @Override
+                public void onSuccess(Void aVoid) {
+                    CurrentApplication.getInstance().getConversations().remove(channel.getName());
+                    Logger.debug("delete", "success");
+                    listener.onSuccess();
+                }
+
+                @Override
+                public void onFailure(MMXChannel.FailureCode failureCode, Throwable throwable) {
+                    Logger.error("delete", throwable);
+                    listener.onFailure(throwable);
+                }
+            });
+        }
+    }
+
 }

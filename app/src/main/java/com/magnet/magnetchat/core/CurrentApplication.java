@@ -23,6 +23,7 @@ import com.magnet.mmx.client.api.MMXMessage;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class CurrentApplication extends MultiDexApplication {
 
@@ -35,7 +36,7 @@ public class CurrentApplication extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         instance = this;
-        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax));
+        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax_kostya));
         UserPreference.getInstance(this);
         InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
@@ -54,7 +55,7 @@ public class CurrentApplication extends MultiDexApplication {
 
     public Map<String, Conversation> getConversations() {
         if (conversations == null) {
-            conversations = new HashMap<>();
+            conversations = new TreeMap<>();
         }
         return conversations;
     }

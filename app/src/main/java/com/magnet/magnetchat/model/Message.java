@@ -147,12 +147,41 @@ public class Message {
     }
 
     public static String makeVideoFileType(String fileName) {
-        String format = "*";
+        String mimeFormat = "*";
         int idx = fileName.lastIndexOf(".");
         if (idx >= 0 && idx < fileName.length() - 1) {
-            format = fileName.substring(idx + 1);
+            String format = fileName.substring(idx + 1);
+            switch (format) {
+                case "flv":
+                    mimeFormat = "x-flv";
+                    break;
+                case "mp4":
+                    mimeFormat = "mp4";
+                    break;
+                case "m3u8":
+                    mimeFormat = "x-mpegURL";
+                    break;
+                case "ts":
+                    mimeFormat = "MP2T";
+                    break;
+                case "3gp":
+                    mimeFormat = "3gpp";
+                    break;
+                case "mov":
+                    mimeFormat = "quicktime";
+                    break;
+                case "avi":
+                    mimeFormat = "x-msvideo";
+                    break;
+                case "wmv":
+                    mimeFormat = "x-ms-wmv";
+                    break;
+                default:
+                    mimeFormat = "*";
+                    break;
+            }
         }
-        return FILE_TYPE_VIDEO + format;
+        return FILE_TYPE_VIDEO + mimeFormat;
     }
 
 }

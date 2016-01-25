@@ -217,7 +217,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
     private void showLeaveDialog(final Conversation conversation) {
         if (leaveDialog == null) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setCancelable(false).setMessage("Are you sure that you want to leave conversation");
+            builder.setCancelable(false);
             builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -226,26 +226,51 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
             });
             leaveDialog = builder.create();
         }
-        leaveDialog.setButton(DialogInterface.BUTTON_POSITIVE, "Leave", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
-                ChannelHelper.getInstance().unsubscribeFromChannel(conversation, new ChannelHelper.OnLeaveChannelListener() {
-                    @Override
-                    public void onSuccess() {
-                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
-                        showAllConversations();
-                    }
+        if (conversation.getChannel().getOwnerId().equals(User.getCurrentUserId())) {
+            leaveDialog.setMessage("Are you sure that you want to delete conversation");
+            leaveDialog.setButton(DialogInterface.BUTTON_POSITIVE, "Delete", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
+                    ChannelHelper.getInstance().deleteChannel(conversation, new ChannelHelper.OnLeaveChannelListener() {
+                        @Override
+                        public void onSuccess() {
+                            findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                            showAllConversations();
+                        }
 
-                    @Override
-                    public void onFailure(Throwable throwable) {
-                        findViewById(R.id.homeProgress).setVisibility(View.GONE);
-                        showMessage("Can't leave the conversation");
-                    }
-                });
-                leaveDialog.dismiss();
-            }
-        });
+                        @Override
+                        public void onFailure(Throwable throwable) {
+                            findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                            showMessage("Can't delete the conversation");
+                        }
+                    });
+                    leaveDialog.dismiss();
+                }
+            });
+        } else {
+            leaveDialog.setMessage("Are you sure that you want to leave conversation");
+            leaveDialog.setButton(DialogInterface.BUTTON_POSITIVE, "Leave", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    findViewById(R.id.homeProgress).setVisibility(View.VISIBLE);
+                    ChannelHelper.getInstance().unsubscribeFromChannel(conversation, new ChannelHelper.OnLeaveChannelListener() {
+                        @Override
+                        public void onSuccess() {
+                            findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                            showAllConversations();
+                        }
+
+                        @Override
+                        public void onFailure(Throwable throwable) {
+                            findViewById(R.id.homeProgress).setVisibility(View.GONE);
+                            showMessage("Can't leave the conversation");
+                        }
+                    });
+                    leaveDialog.dismiss();
+                }
+            });
+        }
         leaveDialog.show();
     }
 
