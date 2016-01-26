@@ -54,7 +54,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         if (User.getCurrentUser() != null) {
-            username = String.format("%s %s", User.getCurrentUser().getFirstName(), User.getCurrentUser().getLastName());
+            username = UserHelper.getInstance().userNameAsString(User.getCurrentUser());
         }
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
