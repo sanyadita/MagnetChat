@@ -62,6 +62,10 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
         findViewById(R.id.chatSendBtn).setOnClickListener(this);
         findViewById(R.id.chatAddAttachment).setOnClickListener(this);
 
@@ -151,6 +155,9 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
                     String name = currentConversation.getChannel().getName();
                     startActivity(DetailsActivity.createIntentForChannel(name));
                 }
+                break;
+            case android.R.id.home:
+                onBackPressed();
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -283,12 +290,14 @@ public class ChatActivity extends BaseActivity implements GoogleApiClient.Connec
         List<User> suppliersList = conversation.getSuppliersList();
         if (conversation.getSuppliers().size() == 1) {
             setTitle(UserHelper.getInstance().userNamesAsString(suppliersList));
+            findViewById(R.id.chatSuppliers).setVisibility(View.GONE);
         } else {
             setTitle("Group");
+            findViewById(R.id.chatSuppliers).setVisibility(View.VISIBLE);
+            String suppliers = UserHelper.getInstance().userNamesAsString(suppliersList);
+            setText(R.id.chatSuppliers, "To: " + suppliers);
         }
         conversation.setHasUnreadMessage(false);
-        String suppliers = UserHelper.getInstance().userNamesAsString(suppliersList);
-        setText(R.id.chatSuppliers, "To: " + suppliers);
         setMessagesList(conversation.getMessages());
     }
 

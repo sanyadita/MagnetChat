@@ -167,7 +167,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         super.onResume();
 
         showAllConversations();
-
+        ChannelHelper.getInstance().rereadConversations(null);
         MMX.registerListener(eventListener);
         registerReceiver(onAddedConversation, new IntentFilter("com.magnet.imessage.ADDED_CONVERSATION"));
     }
@@ -316,7 +316,7 @@ public class HomeActivity extends BaseActivity implements NavigationView.OnNavig
         @Override
         public boolean onMessageReceived(MMXMessage mmxMessage) {
             Logger.debug("onMessageReceived");
-            updateList();
+            showAllConversations();
             return false;
         }
 

@@ -57,7 +57,8 @@ public class UserHelper {
             @Override
             public void failure(ApiError apiError) {
                 Logger.error("register", apiError);
-                onRegisterListener.onFailedRegistration(apiError);
+                if (onRegisterListener != null)
+                    onRegisterListener.onFailedRegistration(apiError);
             }
         });
     }
@@ -71,13 +72,15 @@ public class UserHelper {
                 }
                 MMX.start();
                 Logger.debug("login", "success");
-                onLoginListener.onSuccess();
+                if (onLoginListener != null)
+                    onLoginListener.onSuccess();
             }
 
             @Override
             public void failure(ApiError apiError) {
                 Logger.error("login", apiError);
-                onLoginListener.onFailedLogin(apiError);
+                if (onLoginListener != null)
+                    onLoginListener.onFailedLogin(apiError);
             }
         });
     }
@@ -98,13 +101,15 @@ public class UserHelper {
                 UserPreference.getInstance().cleanCredence();
                 CurrentApplication.getInstance().removeConversations();
                 Logger.debug("logout", "success");
-                listener.onSuccess();
+                if (listener != null)
+                    listener.onSuccess();
             }
 
             @Override
             public void failure(ApiError apiError) {
                 Logger.error("logout", apiError);
-                listener.onFailedLogin(apiError);
+                if (listener != null)
+                    listener.onFailedLogin(apiError);
             }
         });
     }

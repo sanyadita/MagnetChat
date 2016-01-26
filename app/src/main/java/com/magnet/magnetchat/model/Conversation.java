@@ -11,6 +11,7 @@ import com.magnet.mmx.client.api.MMXMessage;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +131,7 @@ public class Conversation {
             builder.attachments(attachment);
         }
         final Message message = Message.createMessageFrom(builder.build());
+        message.setCreationDate(new Date());
         channel.publish(message.getMmxMessage(), new MMXChannel.OnFinishedListener<String>() {
             @Override
             public void onSuccess(String s) {

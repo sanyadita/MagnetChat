@@ -92,24 +92,30 @@ public class ConversationsAdapter extends BaseAdapter {
         List<Message> messages = conversation.getMessages();
         if (messages != null && messages.size() > 0) {
             Message message = messages.get(messages.size() - 1);
-            if (message.getType() != null) {
-                switch (message.getType()) {
-                    case Message.TYPE_MAP:
-                        viewHolder.lastMessage.setText("User's location");
-                        break;
-                    case Message.TYPE_VIDEO:
-                        viewHolder.lastMessage.setText("User's video");
-                        break;
-                    case Message.TYPE_PHOTO:
-                        viewHolder.lastMessage.setText("User's photo");
-                        break;
-                    case Message.TYPE_TEXT:
-                        viewHolder.lastMessage.setText(message.getText());
-                        break;
-                }
-            } else {
-                viewHolder.lastMessage.setText(message.getText());
+            String msgType = message.getType();
+            if (msgType == null) {
+                msgType = Message.TYPE_TEXT;
             }
+            switch (msgType) {
+                case Message.TYPE_MAP:
+                    viewHolder.lastMessage.setText("User's location");
+                    break;
+                case Message.TYPE_VIDEO:
+                    viewHolder.lastMessage.setText("User's video");
+                    break;
+                case Message.TYPE_PHOTO:
+                    viewHolder.lastMessage.setText("User's photo");
+                    break;
+                case Message.TYPE_TEXT:
+                    String text = message.getText().replace(System.getProperty("line.separator"), " ");
+                    if (text.length() > 17) {
+                        text = text.substring(0, 15) + "...";
+                    }
+                    viewHolder.lastMessage.setText(text);
+                    break;
+            }
+        } else {
+            viewHolder.lastMessage.setText("");
         }
         return convertView;
     }

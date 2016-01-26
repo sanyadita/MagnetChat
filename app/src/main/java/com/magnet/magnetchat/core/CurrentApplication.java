@@ -13,7 +13,6 @@ import com.magnet.magnetchat.model.Conversation;
 import com.magnet.magnetchat.model.Message;
 import com.magnet.magnetchat.preferences.UserPreference;
 import com.magnet.magnetchat.util.Logger;
-import com.magnet.max.android.ApiError;
 import com.magnet.max.android.Max;
 import com.magnet.max.android.User;
 import com.magnet.max.android.config.MaxAndroidPropertiesConfig;
@@ -36,7 +35,7 @@ public class CurrentApplication extends MultiDexApplication {
     public void onCreate() {
         super.onCreate();
         instance = this;
-        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax_kostya));
+        Max.init(this.getApplicationContext(), new MaxAndroidPropertiesConfig(this, R.raw.magnetmax));
         UserPreference.getInstance(this);
         InternetConnection.getInstance(this);
         MMX.registerListener(eventListener);
@@ -91,17 +90,7 @@ public class CurrentApplication extends MultiDexApplication {
         @Override
         public boolean onLoginRequired(MMX.LoginReason reason) {
             Logger.debug("login required", reason.name());
-            UserHelper.getInstance().checkAuthentication(new UserHelper.OnLoginListener() {
-                @Override
-                public void onSuccess() {
-
-                }
-
-                @Override
-                public void onFailedLogin(ApiError apiError) {
-
-                }
-            });
+            UserHelper.getInstance().checkAuthentication(null);
             return false;
         }
 

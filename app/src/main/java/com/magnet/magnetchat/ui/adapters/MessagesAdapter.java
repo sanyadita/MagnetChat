@@ -68,7 +68,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.ViewHo
                         String newVideoPath = message.getAttachment().getDownloadUrl();
                         if (newVideoPath != null) {
                             intent = new Intent(Intent.ACTION_VIEW, Uri.parse(newVideoPath));
-                            intent.setDataAndType(Uri.parse(newVideoPath), message.getAttachment().getMimeType());
+                            intent.setDataAndType(Uri.parse(newVideoPath), "video/*");
                             context.startActivity(intent);
                         }
                         break;

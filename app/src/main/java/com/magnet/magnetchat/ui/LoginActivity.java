@@ -83,6 +83,10 @@ public class LoginActivity extends BaseActivity {
         showInfoDialog("Email or password is incorrect", "Please check your information and try again");
     }
 
+    private void showLoginErrorCause(String cause) {
+        showInfoDialog(null, cause + " Please try again");
+    }
+
     private void showNoConnection() {
         showInfoDialog("No connection", "Please check your Internet connection and try again");
     }
@@ -107,12 +111,22 @@ public class LoginActivity extends BaseActivity {
 
         @Override
         public void onFailedLogin(ApiError apiError) {
-            if (apiError.getMessage().contains(MMX.FailureCode.DEVICE_CONCURRENT_LOGIN.getDescription())) {
-                runLoginFromFields();
+            Logger.error("login", apiError);
+            changeLoginMode(false);
+            if (apiError.getMessage().contains(MMX.FailureCode.BAD_REQUEST.getDescription())) {
+                showLoginErrorCause("A bad request submitted to the server.");
+            } else if (apiError.getMessage().contains(MMX.FailureCode.SERVER_AUTH_FAILED.getDescription())) {
+                showLoginErrorCause("Server authentication failure.");
+            } else if (apiError.getMessage().contains(MMX.FailureCode.DEVICE_CONCURRENT_LOGIN.getDescription())) {
+                showLoginErrorCause("Concurrent logins are attempted.");
+            } else if (apiError.getMessage().contains(MMX.FailureCode.DEVICE_ERROR.getDescription())) {
+                showLoginErrorCause("A client error.");
+            } else if (apiError.getMessage().contains(MMX.FailureCode.SERVER_ERROR.getDescription())) {
+                showLoginErrorCause("A server error.");
+            } else if (apiError.getMessage().contains(MMX.FailureCode.SERVICE_UNAVAILABLE.getDescription())) {
+                showLoginErrorCause("The MMX service is not available due to network issue or server issue.");
             } else {
-                Logger.error("login", apiError);
                 showLoginFailed();
-                changeLoginMode(false);
             }
         }
     };

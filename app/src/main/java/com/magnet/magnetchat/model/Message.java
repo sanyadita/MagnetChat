@@ -1,6 +1,7 @@
 package com.magnet.magnetchat.model;
 
 import android.location.Location;
+import android.webkit.MimeTypeMap;
 
 import com.magnet.max.android.Attachment;
 import com.magnet.max.android.User;
@@ -28,6 +29,7 @@ public class Message {
 
     private MMXMessage mmxMessage;
     private boolean isDelivered;
+    private Date creationDate;
 
     public MMXMessage getMmxMessage() {
         return mmxMessage;
@@ -50,6 +52,9 @@ public class Message {
     public Date getCreateTime() {
         if (mmxMessage == null) {
             return null;
+        }
+        if (mmxMessage.getTimestamp() == null) {
+            return creationDate;
         }
         return mmxMessage.getTimestamp();
     }
@@ -95,6 +100,10 @@ public class Message {
 
     public void setIsDelivered(boolean isDelivered) {
         this.isDelivered = isDelivered;
+    }
+
+    public void setCreationDate(Date creationDate) {
+        this.creationDate = creationDate;
     }
 
     @Override
@@ -151,35 +160,7 @@ public class Message {
         int idx = fileName.lastIndexOf(".");
         if (idx >= 0 && idx < fileName.length() - 1) {
             String format = fileName.substring(idx + 1);
-            switch (format) {
-                case "flv":
-                    mimeFormat = "x-flv";
-                    break;
-                case "mp4":
-                    mimeFormat = "mp4";
-                    break;
-                case "m3u8":
-                    mimeFormat = "x-mpegURL";
-                    break;
-                case "ts":
-                    mimeFormat = "MP2T";
-                    break;
-                case "3gp":
-                    mimeFormat = "3gpp";
-                    break;
-                case "mov":
-                    mimeFormat = "quicktime";
-                    break;
-                case "avi":
-                    mimeFormat = "x-msvideo";
-                    break;
-                case "wmv":
-                    mimeFormat = "x-ms-wmv";
-                    break;
-                default:
-                    mimeFormat = "*";
-                    break;
-            }
+            mimeFormat = MimeTypeMap.getSingleton().getMimeTypeFromExtension(format);
         }
         return FILE_TYPE_VIDEO + mimeFormat;
     }
