@@ -24,7 +24,7 @@ import java.util.Set;
 
 public class ChannelHelper {
 
-    public static final String ACTION_ADDED_CONVERSATION = "com.magnet.imessage.ADDED_CONVERSATION";
+    public static final String ACTION_ADDED_CONVERSATION = "com.magnet.magnetchat.ADDED_CONVERSATION";
 
     private static ChannelHelper instance;
 
@@ -366,6 +366,7 @@ public class ChannelHelper {
             Conversation conversation = CurrentApplication.getInstance().getConversationByName(mmxMessage.getChannel().getName());
             if (conversation != null) {
                 conversation.addMessage(message);
+                conversation.setLastActiveTime(new Date());
                 User sender = message.getMmxMessage().getSender();
                 if (sender != null && !sender.equals(User.getCurrentUser())) {
                     if (conversation.getSuppliers().get(sender.getUserIdentifier()) == null) {

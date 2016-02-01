@@ -22,6 +22,7 @@ public class Conversation {
     private List<Message> messages;
     private boolean hasUnreadMessage;
     private MMXChannel channel;
+    private Date lastActiveTime;
 
     public interface OnSendMessageListener {
         void onSuccessSend(Message message);
@@ -57,6 +58,17 @@ public class Conversation {
 
     public void setHasUnreadMessage(boolean hasUnreadMessage) {
         this.hasUnreadMessage = hasUnreadMessage;
+    }
+
+    public Date getLastActiveTime() {
+        if (lastActiveTime == null && channel != null) {
+            return channel.getLastTimeActive();
+        }
+        return lastActiveTime;
+    }
+
+    public void setLastActiveTime(Date lastActiveTime) {
+        this.lastActiveTime = lastActiveTime;
     }
 
     public MMXChannel getChannel() {
